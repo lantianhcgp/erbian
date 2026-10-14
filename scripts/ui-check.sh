@@ -103,7 +103,11 @@ for item in "1:耳边待办" "2:刷新" "3:唤醒状态"; do
   DUMP=$(dump)
   printf '%s' "$DUMP" > "$EV/nav$idx.xml"
   echo "-- nav $idx --" >> "$D"
-  if has "$DUMP" "$marker"; then echo "OK: $marker" >> "$D"; else echo "MISS: $marker" >> "$D"; FAIL=1; fi
+  if has "$DUMP" "$marker"; then echo "OK: $marker" >> "$D"; else
+    echo "MISS: $marker" >> "$D"; FAIL=1
+    echo "-- texts on screen after tap $idx:" >> "$D"
+    printf '%s' "$DUMP" | grep -o 'text="[^"]*"' | sort -u | head -15 >> "$D"
+  fi
 done
 
 tap_page "0" || true
