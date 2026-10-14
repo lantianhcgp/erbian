@@ -8,5 +8,8 @@ class AssistInteractionService : VoiceInteractionService()
 
 class AssistSessionService : VoiceInteractionSessionService() {
     // SDK35 真实签名: onNewSession(Bundle args)
-    override fun onNewSession(args: android.os.Bundle?): VoiceInteractionSession = AssistSession(this)
+    override fun onNewSession(args: android.os.Bundle?): VoiceInteractionSession {
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onNewSession args=$args")
+        return AssistSession(this)
+    }
 }

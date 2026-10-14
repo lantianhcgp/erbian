@@ -2,6 +2,7 @@ package com.lantianhcgp.erbian
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -28,7 +29,10 @@ class SmokeTest {
         compose.onNodeWithText("说点什么").assertExists()
         compose.onNodeWithText("说点什么").performTextInput("明天月考别忘了带身份证")
         compose.onNodeWithContentDescription("发送").performClick()
-        compose.waitForIdle()
+        // 发送链路是 异步入库 + Flow 回流，轮询等待代替单次断言
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithText("明天月考别忘了带身份证").fetchSemanticsNodes().isNotEmpty()
+        }
         compose.onNodeWithText("明天月考别忘了带身份证").assertIsDisplayed()
     }
 
@@ -42,7 +46,9 @@ class SmokeTest {
             0 to "频道",
         )) {
             compose.onNodeWithContentDescription(page.toString()).performClick()
-            compose.waitForIdle()
+            compose.waitUntil(timeoutMillis = 5_000) {
+                compose.onAllNodesWithText(marker, substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
             compose.onNodeWithText(marker, substring = true).assertExists("page $page marker '$marker' missing")
         }
     }
