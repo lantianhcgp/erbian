@@ -43,7 +43,8 @@ $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_role.txt" 2>&1
 echo "== [4] long-press power key (behavior=5 -> our assist service) =="
 bash scripts/wake-screen.sh
 timeout 15 $ADB logcat -c || true
-$ADB shell input keyevent --longpress KEYCODE_POWER
+timeout 20 $ADB shell dumpsys -l 2>/dev/null | grep -i voice > "$EV/voice_services_list.txt" || true
+timeout 20 $ADB shell input keyevent --longpress KEYCODE_POWER
 sleep 4
 $ADB shell "dumpsys window | grep -iE 'erbian|VoiceInter|Assist'" > "$EV/assist_window.txt" || true
 $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_wake.txt" 2>&1 || true
@@ -52,9 +53,17 @@ sleep 1
 timeout 20 $ADB exec-out screencap -p > "$EV/02_wake.png"   # 双帧取后者（软件渲染首帧常黑）
 timeout 30 $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true
 grep -E "session|onNewSession|panel attached|powerLongPress" "$EV/wake_logcat.txt" > "$EV/session_evidence.txt" || true
-timeout 25 $ADB shell run-as $PKG sh -c 'cat files/logs/app-*.log 2>/dev/null | tail -60' > "$EV/session_applog.txt" 2>>"$EV/session_applog.txt" || true
+# UI 侧会话面板探测：长按后屏幕上是否出现「发送」按钮/输入框
+timeout 40 $ADB shell uiautomator dump /sdcard/ui_wake.xml > "$EV/wake_dump_out.txt" 2>&1 || true
+timeout 20 $ADB shell cat /sdcard/ui_wake.xml 2>/dev/null | grep -o '说点什么\|发送\|耳边' | sort -u > "$EV/session_ui_evidence.txt" || true
+echo "-- session_ui_evidence:" >> "$EV/session_evidence.txt"
+cat "$EV/session_ui_evidence.txt" >> "$EV/session_evidence.txt" 2>/dev/null || true
+timeout 25 $ADB shell run-as $PKG sh -c 'tail -20 files/logs/app-*.log' > "$EV/session_applog.txt" 2>>"$EV/session_applog.txt" || true
 echo "--- applog tail ---" >> "$EV/session_applog.txt"
 cat "$EV/session_applog.txt" || true
+echo "== [4c] cmd voice_interaction probe =="
+timeout 20 $ADB shell cmd voice_interaction > "$EV/cmd_vie_out.txt" 2>&1 || true
+head -20 "$EV/cmd_vie_out.txt" || true
 
 echo "== [5] direct ASSIST intent probe =="
 bash scripts/wake-screen.sh
