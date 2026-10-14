@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # 模拟器自动验收脚本（CI 内执行，android-emulator-runner 提供 adb 与已启动模拟器）
+# 顺序原则：截图/唤醒取证在前（干净状态），测试工具（uiautomator/instrumentation）垫底防副作用。
 set -e
 cd "$(dirname "$0")/.."
 EV=build/acceptance
@@ -17,29 +18,19 @@ cat "$EV/screen_state.txt" || true
 echo "== [1] install =="
 $ADB install -r app/build/outputs/apk/debug/app-debug.apk | tee "$EV/install.txt"
 
-echo "== [2] instrumentation smoke tests (screen interactive, best-effort) =="
-gradle :app:connectedDebugAndroidTest --no-daemon > "$EV/instrumentation.txt" 2>&1 || true
-grep -E "FAILED|BUILD" "$EV/instrumentation.txt" | tail -4 || true
-echo "== [2b] uiautomator UI check (gating) =="
-bash scripts/ui-check.sh || true
-echo "== [2c] crash evidence =="
-$ADB logcat -d 2>/dev/null | grep -B3 -A40 "FATAL EXCEPTION" | head -120 > "$EV/crash_evidence.txt" || true
-wc -l "$EV/crash_evidence.txt" || true
-
-echo "== [3] launch app + baseline screenshot =="
+echo "== [2] launch app + baseline screenshot =="
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null
-sleep 3
+sleep 4
 $ADB exec-out screencap -p > "$EV/01_home.png"
 
-echo "== [4] configure wake chain (same 3 settings as production) =="
+echo "== [3] configure wake chain (same 3 settings as production) =="
 $ADB shell settings put secure assistant "$COMP" | tee "$EV/wake_settings.txt"
 $ADB shell settings put secure voice_interaction_service "$COMP" | tee -a "$EV/wake_settings.txt"
 $ADB shell settings put global power_button_long_press 5 | tee -a "$EV/wake_settings.txt"
 $ADB shell settings get secure assistant | tee -a "$EV/wake_settings.txt"
-echo "== [4b] roles (verb fallback) =="
+echo "== [3b] roles (verb fallback) =="
 {
   $ADB shell cmd role set-role-holders android.app.role.ASSISTANT "$PKG" 2>&1
-  $ADB shell cmd role set-role-holders android.app.role.VOICE_INTERACTION "$PKG" 2>&1
   $ADB shell cmd role add-role-holders android.app.role.ASSISTANT "$PKG" 2>&1
   $ADB shell cmd role get-role-holders android.app.role.ASSISTANT 2>&1
   $ADB shell cmd role get-role-holders android.app.role.VOICE_INTERACTION 2>&1
@@ -47,23 +38,20 @@ echo "== [4b] roles (verb fallback) =="
 sleep 2
 $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_role.txt" 2>&1 || true
 
-echo "== [5] long-press power key (behavior=5 -> our assist service) =="
+echo "== [4] long-press power key (behavior=5 -> our assist service) =="
 bash scripts/wake-screen.sh
 $ADB logcat -c || true
-$ADB shell dumpsys voice_interaction > "$EV/vie_dump_before.txt" 2>&1 || true
 $ADB shell input keyevent --longpress KEYCODE_POWER
 sleep 4
 $ADB shell "dumpsys window | grep -iE 'erbian|VoiceInter|Assist'" > "$EV/assist_window.txt" || true
 $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_wake.txt" 2>&1 || true
-grep -iE "No activity|showSession|VoiceInteractionManager|voiceinteraction" "$EV/wake_logcat.txt" > /dev/null 2>&1 || true
 $ADB exec-out screencap -p > "$EV/02_wake.png"
-$ADB shell dumpsys voice_interaction > "$EV/vie_dump_after.txt" 2>&1 || true
 $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true
 grep -E "session|onNewSession|panel attached|powerLongPress" "$EV/wake_logcat.txt" > "$EV/session_evidence.txt" || true
 cat "$EV/session_evidence.txt" || true
 $ADB shell input keyevent KEYCODE_BACK || true
 
-echo "== [5b] direct ASSIST intent probe =="
+echo "== [5] direct ASSIST intent probe =="
 bash scripts/wake-screen.sh
 $ADB logcat -c || true
 $ADB shell am start -a android.intent.action.ASSIST >/dev/null 2>&1 || true
@@ -77,4 +65,15 @@ $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null || true
 sleep 2
 $ADB exec-out screencap -p > "$EV/03_final.png"
 
-echo "ACCEPTANCE DONE, verdict=$(cat $EV/verdict.txt)"
+echo "== [7] crash evidence =="
+$ADB logcat -d 2>/dev/null | grep -B3 -A40 "FATAL EXCEPTION" | head -120 > "$EV/crash_evidence.txt" || true
+wc -l "$EV/crash_evidence.txt" || true
+
+echo "== [8] uiautomator UI check (gating, last - may affect display) =="
+bash scripts/ui-check.sh || true
+
+echo "== [9] instrumentation (best-effort, very last) =="
+gradle :app:connectedDebugAndroidTest --no-daemon > "$EV/instrumentation.txt" 2>&1 || true
+grep -E "FAILED|BUILD" "$EV/instrumentation.txt" | tail -4 || true
+
+echo "ACCEPTANCE DONE, verdict=$(cat $EV/verdict.txt 2>/dev/null || echo N/A)"

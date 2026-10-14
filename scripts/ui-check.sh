@@ -15,8 +15,14 @@ W=${SIZE%x*}; H=${SIZE#*x}
 echo "screen=${W}x${H}" | tee -a "$D"
 
 dump() {
-  $ADB shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 || true
-  $ADB shell cat /sdcard/ui.xml 2>/dev/null || true
+  $ADB shell uiautomator dump /sdcard/ui.xml > "$EV/ui_dump_out.txt" 2>&1 || true
+  local X
+  X=$($ADB shell cat /sdcard/ui.xml 2>/dev/null || true)
+  if [ -z "$X" ]; then
+    echo "-- dump empty; uiautomator said: $(cat "$EV/ui_dump_out.txt")" >> "$D"
+    echo "-- uiautomator out:" >> "$D"; cat "$EV/ui_dump_out.txt" >> "$D" 2>/dev/null || true
+  fi
+  printf '%s' "$X"
 }
 
 has() { # has <dump> <text>
