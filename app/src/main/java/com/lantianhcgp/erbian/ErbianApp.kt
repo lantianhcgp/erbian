@@ -20,7 +20,7 @@ import java.util.UUID
 /** 手动 DI（YAGNI：不引 Hilt）。 */
 object Locator {
     lateinit var app: ErbianApp
-        private set
+        internal set
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val logger: Logger by lazy { Logger(app) }

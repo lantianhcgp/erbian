@@ -13,7 +13,7 @@ class ShizukuBridge(private val log: Logger) {
     fun isAvailable(): Boolean = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
 
     fun hasPermission(): Boolean = runCatching {
-        isAvailable() && Shizuku.checkSelfPermission()
+        isAvailable() && Shizuku.checkSelfPermission() == Shizuku.PERMISSION_GRANTED
     }.getOrDefault(false)
 
     fun readWakeSettings(): WakeSettings? {
@@ -48,7 +48,15 @@ class ShizukuBridge(private val log: Logger) {
     }
 
     fun runShell(cmd: String): Pair<Int, String> = runCatching {
-        val p = Shizuku.newProcess(arrayOf("sh", "-c", cmd))
+        // Shizuku 13.x 里 newProcess 是私有的，反射调用（与 rish 同一底层）
+        val m = Shizuku::class.java.getDeclaredMethod(
+            "newProcess",
+            Array<String>::class.java,
+            Array<String>::class.java,
+            String::class.java,
+        )
+        m.isAccessible = true
+        val p = m.invoke(null, arrayOf("sh", "-c", cmd), null, null) as Process
         val out = p.inputStream.readBytes().toString(Charsets.UTF_8).trim()
         val err = p.errorStream.readBytes().toString(Charsets.UTF_8).trim()
         p.waitFor()

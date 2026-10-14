@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,7 +82,9 @@ fun HomeScreen(vm: AppViewModel) {
             Column(Modifier.fillMaxSize()) {
                 AnimatedContent(
                     targetState = page,
-                    transitionSpec = { fadeIn(tween220()) togetherWith fadeOut(tween220()) },
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
+                    },
                     modifier = Modifier.weight(1f),
                 ) { p ->
                     when (p) {
@@ -135,5 +138,3 @@ fun HomeScreen(vm: AppViewModel) {
         }
     }
 }
-
-private fun tween220() = androidx.compose.animation.core.tween<Int>(220)

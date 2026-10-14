@@ -35,8 +35,8 @@ class SuperellipseShape(private val corner: Float) : Shape {
                 val t = (Math.PI / 2) * (i / 10.0)
                 val ct = kotlin.math.cos(t)
                 val st = kotlin.math.sin(t)
-                val x = cx + sx * r * sign(ct) * abs(ct).pow(2.0 / n)
-                val y = cy + sy * r * sign(st) * abs(st).pow(2.0 / n)
+                val x = (cx + sx * r * sign(ct).toFloat() * abs(ct).pow(2.0 / n)).toFloat()
+                val y = (cy + sy * r * sign(st).toFloat() * abs(st).pow(2.0 / n)).toFloat()
                 pts.add(Offset(x, y))
             }
             return pts

@@ -41,9 +41,9 @@ import kotlinx.coroutines.launch
  */
 class AssistSession(private val ctx: android.content.Context) : VoiceInteractionSession(ctx) {
 
-    override fun onShow(args: Bundle?) {
-        super.onShow(args)
-        val parent = window.window.decorView as ViewGroup
+    override fun onShow(args: android.os.Bundle?, activityOptions: android.app.ActivityOptions?) {
+        super.onShow(args, activityOptions)
+        val parent = window?.decorView as? ViewGroup ?: return
         parent.removeAllViews()
         parent.addView(SessionPanelView(ctx, onDismiss = { hideSession() }))
     }

@@ -48,8 +48,10 @@ class AppViewModel : ViewModel() {
     }
 
     fun resend(m: Message) {
-        Locator.repository.setStatus(m.id, MsgStatus.PENDING)
-        Locator.queue.enqueue(m.copy(status = MsgStatus.PENDING))
+        viewModelScope.launch {
+            Locator.repository.setStatus(m.id, MsgStatus.PENDING)
+            Locator.queue.enqueue(m.copy(status = MsgStatus.PENDING))
+        }
     }
 
     fun repairWake() {
