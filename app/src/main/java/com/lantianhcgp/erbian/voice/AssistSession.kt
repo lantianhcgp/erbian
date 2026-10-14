@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
  * 形态：底部半高面板。输入（语音交给输入法）→ 发送 → 自动收起。
  * 不做录音、不做转写（设计文档 §四）。
  */
-class AssistSession(ctx: android.content.Context) : VoiceInteractionSession(ctx) {
+class AssistSession(private val ctx: android.content.Context) : VoiceInteractionSession(ctx) {
 
     override fun onShow(args: Bundle?) {
         super.onShow(args)

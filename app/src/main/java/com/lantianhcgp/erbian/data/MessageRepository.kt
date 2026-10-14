@@ -29,10 +29,10 @@ class MessageRepository(context: Context, scope: CoroutineScope) {
     private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** 频道消息（含发送状态）。 */
-    val channel: StateFlow<List<Message>> = MutableStateFlow(emptyList()).also { flow ->
+    val channel: StateFlow<List<Message>> = MutableStateFlow<List<Message>>(emptyList()).also { flow ->
         io.launch {
             dao.observeAll().collect { list ->
-                (flow as MutableStateFlow).value = list.map { it.toModel() }
+                (flow as MutableStateFlow<List<Message>>).value = list.map { it.toModel() }
             }
         }
     }
