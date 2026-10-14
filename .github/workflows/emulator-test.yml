@@ -6,6 +6,7 @@ on:
     branches: [ master ]
     paths:
       - 'app/**'
+      - 'scripts/**'
       - '.github/workflows/emulator-test.yml'
 
 jobs:

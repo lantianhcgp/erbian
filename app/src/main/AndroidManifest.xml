@@ -22,6 +22,11 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 助理兜底入口：系统走 ACTION_ASSIST activity 路径时也能到我们 -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- 长按电源键唤醒（设计文档 §二 标准三件套） -->

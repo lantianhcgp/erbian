@@ -36,6 +36,15 @@ $ADB shell settings put secure assistant "$COMP" | tee "$EV/wake_settings.txt"
 $ADB shell settings put secure voice_interaction_service "$COMP" | tee -a "$EV/wake_settings.txt"
 $ADB shell settings put global power_button_long_press 5 | tee -a "$EV/wake_settings.txt"
 $ADB shell settings get secure assistant | tee -a "$EV/wake_settings.txt"
+echo "== [4b] roles =="
+{
+  $ADB shell cmd role add-role-holders android.app.role.ASSISTANT "$PKG" 2>&1
+  $ADB shell cmd role add-role-holders android.app.role.VOICE_INTERACTION "$PKG" 2>&1
+  $ADB shell cmd role get-role-holders android.app.role.ASSISTANT 2>&1
+  $ADB shell cmd role get-role-holders android.app.role.VOICE_INTERACTION 2>&1
+} | tee "$EV/role_out.txt"
+sleep 2
+$ADB shell dumpsys activity services "$PKG" > "$EV/services_after_role.txt" 2>&1 || true
 
 echo "== [5] long-press power key (behavior=5 -> our assist service) =="
 $ADB logcat -c || true
@@ -43,6 +52,8 @@ $ADB shell dumpsys voice_interaction > "$EV/vie_dump_before.txt" 2>&1 || true
 $ADB shell input keyevent --longpress KEYCODE_POWER
 sleep 4
 $ADB shell "dumpsys window | grep -iE 'erbian|VoiceInter|Assist'" > "$EV/assist_window.txt" || true
+$ADB shell dumpsys activity services "$PKG" > "$EV/services_after_wake.txt" 2>&1 || true
+grep -iE "No activity|showSession|VoiceInteractionManager|voiceinteraction" "$EV/wake_logcat.txt" > /dev/null 2>&1 || true
 $ADB exec-out screencap -p > "$EV/02_wake.png"
 $ADB shell dumpsys voice_interaction > "$EV/vie_dump_after.txt" 2>&1 || true
 $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true

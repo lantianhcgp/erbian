@@ -15,7 +15,8 @@ import org.junit.runner.RunWith
 
 /**
  * 模拟器冒烟验收（计划 Task 27）。
- * 覆盖：频道页发送出泡、四页可导航、设置页唤醒状态卡存在。
+ * 单方法串行：发送出泡 → 四页导航。
+ * （曾拆两方法，第二次启动 activity 时序问题导致 No compose hierarchies，故合并。）
  */
 @RunWith(AndroidJUnit4::class)
 class SmokeTest {
@@ -24,21 +25,19 @@ class SmokeTest {
     val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun channelSendShowsBubble() {
+    fun fullSmoke() {
         compose.waitForIdle()
+
+        // 1) 频道页发送出泡
         compose.onNodeWithText("说点什么").assertExists()
         compose.onNodeWithText("说点什么").performTextInput("明天月考别忘了带身份证")
         compose.onNodeWithContentDescription("发送").performClick()
-        // 发送链路是 异步入库 + Flow 回流，轮询等待代替单次断言
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.onAllNodesWithText("明天月考别忘了带身份证").fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("明天月考别忘了带身份证").assertIsDisplayed()
-    }
 
-    @Test
-    fun navigateAllPages() {
-        compose.waitForIdle()
+        // 2) 四页导航（各页标记文本）
         for ((page, marker) in listOf(
             1 to "耳边待办",
             2 to "画像",
