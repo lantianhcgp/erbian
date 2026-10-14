@@ -57,14 +57,23 @@ timeout 30 $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true
 grep -E "session|onNewSession|panel attached|powerLongPress" "$EV/wake_logcat.txt" > "$EV/session_evidence.txt" || true
 # UI 侧会话面板探测：长按后屏幕上是否出现「发送」按钮/输入框
 timeout 40 $ADB shell uiautomator dump /sdcard/ui_wake.xml > "$EV/wake_dump_out.txt" 2>&1 || true
-timeout 20 $ADB shell cat /sdcard/ui_wake.xml 2>/dev/null | grep -o '说点什么\|发送\|耳边' | sort -u > "$EV/session_ui_evidence.txt" || true
+timeout 20 $ADB shell cat /sdcard/ui_wake.xml 2>/dev/null | grep -o 'text="发送"' | head -1 > "$EV/session_ui_evidence.txt" || true
+echo "(空=面板未出现; text发送=面板特征)" >> "$EV/session_ui_evidence.txt" 
 echo "-- session_ui_evidence:" >> "$EV/session_evidence.txt"
 cat "$EV/session_ui_evidence.txt" >> "$EV/session_evidence.txt" 2>/dev/null || true
 timeout 25 $ADB shell run-as $PKG sh -c 'tail -20 files/logs/app-*.log' > "$EV/session_applog.txt" 2>>"$EV/session_applog.txt" || true
 echo "--- applog tail ---" >> "$EV/session_applog.txt"
 cat "$EV/session_applog.txt" || true
 echo "== [4c] cmd voiceinteraction probe =="
-head -25 "$EV/cmd_vie_out.txt" || true
+head -8 "$EV/cmd_vie_out.txt" || true
+echo "== [4e] cmd voiceinteraction show (direct session trigger) =="
+timeout 15 $ADB shell cmd voiceinteraction show > "$EV/cmd_show_out.txt" 2>&1 || true
+sleep 3
+timeout 40 $ADB shell uiautomator dump /sdcard/ui_show.xml > /dev/null 2>&1 || true
+timeout 20 $ADB shell cat /sdcard/ui_show.xml 2>/dev/null | grep -o 'text="发送"' | head -1 > "$EV/show_ui_evidence.txt" || true
+timeout 25 $ADB shell "run-as $PKG sh -c 'tail -8 files/logs/app-*.log'" > "$EV/show_applog.txt" 2>&1 || true
+cat "$EV/cmd_show_out.txt" || true; cat "$EV/show_applog.txt" || true
+timeout 15 $ADB shell cmd voiceinteraction hide > /dev/null 2>&1 || true
 echo "== [4d] run-as identity probe =="
 timeout 20 $ADB shell "run-as $PKG id" > "$EV/runas_id.txt" 2>&1 || true
 timeout 25 $ADB shell "run-as $PKG sh -c 'tail -20 files/logs/app-*.log'" >> "$EV/session_applog.txt" 2>&1 || true

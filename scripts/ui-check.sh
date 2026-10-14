@@ -101,6 +101,7 @@ for item in "1:耳边待办" "2:刷新" "3:唤醒状态"; do
   tap_page "$idx" || true
   sleep 2
   DUMP=$(dump)
+  printf '%s' "$DUMP" > "$EV/nav$idx.xml"
   echo "-- nav $idx --" >> "$D"
   if has "$DUMP" "$marker"; then echo "OK: $marker" >> "$D"; else echo "MISS: $marker" >> "$D"; FAIL=1; fi
 done
