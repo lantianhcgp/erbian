@@ -20,6 +20,11 @@ $ADB install -r app/build/outputs/apk/debug/app-debug.apk | tee "$EV/install.txt
 $ADB shell pm grant $PKG android.permission.READ_CALENDAR 2>/dev/null || true
 $ADB shell pm grant $PKG android.permission.WRITE_CALENDAR 2>/dev/null || true
 
+echo "== [1b] start local webhook stub (captures uplink POST with signature) =="
+: > "$EV/uplink_received.txt"
+python3 scripts/webhook_stub.py "$EV/uplink_received.txt" > /dev/null 2>&1 &
+echo "stub pid $!"
+
 echo "== [2] launch app + baseline screenshot =="
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null
 sleep 4
