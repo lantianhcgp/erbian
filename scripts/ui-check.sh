@@ -37,6 +37,7 @@ m = None
 for mm in re.finditer(r'content-desc="([^"]*)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
     if html.unescape(mm.group(1)) == desc:
         m = mm
+        break  # 首匹配即停（曾因取最后匹配点到键盘上的同名节点）
 if not m:
     for mm in re.finditer(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*content-desc="([^"]*)"', xml):
     # second pattern unlikely; keep simple
