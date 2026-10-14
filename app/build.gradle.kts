@@ -42,6 +42,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -90,9 +91,19 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
+    // Ktor server (CIO) — 内嵌 HTTP + MCP
+    implementation("io.ktor:ktor-server-core:2.3.13")
+    implementation("io.ktor:ktor-server-cio:2.3.13")
+
+    // Shizuku — 唤醒设置自检自愈
+    implementation("dev.rikka.shizuku:api:13.1.5")
+
     // 测试
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.09.00"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

@@ -23,5 +23,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 长按电源键唤醒（设计文档 §二 标准三件套） -->
+        <service
+            android:name=".voice.AssistInteractionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":assist">
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/assist_interaction" />
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".voice.AssistSessionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:process=":assist" />
     </application>
 </manifest>
