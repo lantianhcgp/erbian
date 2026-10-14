@@ -10,10 +10,9 @@ PKG=com.lantianhcgp.erbian
 COMP=$PKG/$PKG.voice.AssistInteractionService
 
 echo "== [0] pin screen on =="
-$ADB shell svc power stayon usb
-$ADB shell settings put global stay_on_while_plugged_in 3
-$ADB shell input keyevent KEYCODE_WAKEUP
-$ADB shell wm dismiss-keyguard || true
+bash scripts/wake-screen.sh
+$ADB shell dumpsys power | grep -E "mWakefulness=|mScreenOn" | head -3 > "$EV/screen_state.txt" || true
+cat "$EV/screen_state.txt" || true
 
 echo "== [1] install =="
 $ADB install -r app/build/outputs/apk/debug/app-debug.apk | tee "$EV/install.txt"
@@ -49,6 +48,7 @@ sleep 2
 $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_role.txt" 2>&1 || true
 
 echo "== [5] long-press power key (behavior=5 -> our assist service) =="
+bash scripts/wake-screen.sh
 $ADB logcat -c || true
 $ADB shell dumpsys voice_interaction > "$EV/vie_dump_before.txt" 2>&1 || true
 $ADB shell input keyevent --longpress KEYCODE_POWER
@@ -64,6 +64,7 @@ cat "$EV/session_evidence.txt" || true
 $ADB shell input keyevent KEYCODE_BACK || true
 
 echo "== [5b] direct ASSIST intent probe =="
+bash scripts/wake-screen.sh
 $ADB logcat -c || true
 $ADB shell am start -a android.intent.action.ASSIST >/dev/null 2>&1 || true
 sleep 3
@@ -71,6 +72,7 @@ $ADB exec-out screencap -p > "$EV/04_assist.png"
 $ADB logcat -d -t 300 > "$EV/assist_intent_logcat.txt" 2>&1 || true
 
 echo "== [6] final screenshot =="
+bash scripts/wake-screen.sh
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null || true
 sleep 2
 $ADB exec-out screencap -p > "$EV/03_final.png"

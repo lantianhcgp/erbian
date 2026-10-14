@@ -8,6 +8,8 @@ PKG=com.lantianhcgp.erbian
 D=$EV/ui_check_detail.txt
 : > "$D"
 
+bash "$(dirname "$0")/wake-screen.sh"
+
 SIZE=$($ADB shell wm size | grep -oE '[0-9]+x[0-9]+' | head -1)
 W=${SIZE%x*}; H=${SIZE#*x}
 echo "screen=${W}x${H}" | tee -a "$D"
