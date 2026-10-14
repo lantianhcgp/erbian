@@ -81,7 +81,7 @@ timeout 25 $ADB shell "run-as $PKG sh -c 'tail -20 files/logs/app-*.log'" >> "$E
 echo "== [5] ASSIST intent = gating wake-chain check (dual-route: activity route shows WakePanel) =="
 bash scripts/wake-screen.sh
 timeout 15 $ADB logcat -c || true
-timeout 20 $ADB shell am start -a android.intent.action.ASSIST > "$EV/assist_start_out.txt" 2>&1 || true
+timeout 20 $ADB shell am start -a android.intent.action.ASSIST -n $PKG/.ui.MainActivity > "$EV/assist_start_out.txt" 2>&1 || true
 sleep 3
 timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
 sleep 1
