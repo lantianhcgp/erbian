@@ -66,10 +66,16 @@ class ErbianApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Locator.app = this
-        Locator.logger.i("app", "ErbianApp onCreate v${BuildConfig.VERSION_NAME}")
-        Locator.uplink.start(Locator.scope)
-        Locator.scope.launch { runCatching { Locator.server.start(Locator) } }
-        Locator.scope.launch { selfCheckWake() }
+        Locator.logger.i("app", "ErbianApp onCreate v${BuildConfig.VERSION_NAME} process=${Application.getProcessName()}")
+
+        // 只在主进程启动 上行通道 + 内嵌 server（:assist 进程只跑 VoiceInteraction 服务；
+        // 双进程抢 8790 端口 → BindException 崩溃环，2026-10-14 真机实锤）
+        val isMain = Application.getProcessName() == packageName
+        if (isMain) {
+            Locator.uplink.start(Locator.scope)
+            Locator.scope.launch { runCatching { Locator.server.start(Locator) } }
+            Locator.scope.launch { selfCheckWake() }
+        }
     }
 
     /**
