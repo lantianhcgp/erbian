@@ -57,6 +57,18 @@ tap_page() { # $1=index -> dump to /tmp, find bounds, tap
     echo "  tap_page $1: node not found" >> "$D"
     return 1
   fi
+  echo "  tap_page $1 -> $C" >> "$D"
+  python3 - "$1" >> "$D" 2>/dev/null <<'PYEOF2'
+import re, html, sys
+xml=open('/tmp/ui_live.xml',encoding='utf-8',errors='ignore').read()
+want=sys.argv[1]
+for mm in re.finditer(r'content-desc="([^"]+)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
+    d=html.unescape(mm.group(1))
+    if d in list("0123"):
+        x1,y1,x2,y2=map(int,mm.groups()[1:5])
+        mark=" <== target" if d==want else ""
+        print(f"  desc={d} center=({(x1+x2)//2},{(y1+y2)//2}){mark}")
+PYEOF2
   timeout 15 $ADB shell input tap $C
 }
 
