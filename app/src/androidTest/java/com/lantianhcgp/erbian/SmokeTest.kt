@@ -27,7 +27,7 @@ class SmokeTest {
         compose.waitForIdle()
         compose.onNodeWithText("说点什么").assertExists()
         compose.onNodeWithText("说点什么").performTextInput("明天月考别忘了带身份证")
-        compose.onNodeWithText("发送").performClick()
+        compose.onNodeWithContentDescription("发送").performClick()
         compose.waitForIdle()
         compose.onNodeWithText("明天月考别忘了带身份证").assertIsDisplayed()
     }

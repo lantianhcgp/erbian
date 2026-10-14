@@ -41,11 +41,12 @@ import kotlinx.coroutines.launch
  */
 class AssistSession(private val ctx: android.content.Context) : VoiceInteractionSession(ctx) {
 
-    override fun onShow(args: android.os.Bundle?, activityOptions: android.app.ActivityOptions?) {
-        super.onShow(args, activityOptions)
+    // SDK35 真实签名: onShow(Bundle args, int showFlags)；收起用 hide()
+    override fun onShow(args: android.os.Bundle?, showFlags: Int) {
+        super.onShow(args, showFlags)
         val parent = window?.decorView as? ViewGroup ?: return
         parent.removeAllViews()
-        parent.addView(SessionPanelView(ctx, onDismiss = { hideSession() }))
+        parent.addView(SessionPanelView(ctx, onDismiss = { hide() }))
     }
 }
 

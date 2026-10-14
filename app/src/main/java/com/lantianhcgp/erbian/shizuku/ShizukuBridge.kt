@@ -13,7 +13,7 @@ class ShizukuBridge(private val log: Logger) {
     fun isAvailable(): Boolean = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
 
     fun hasPermission(): Boolean = runCatching {
-        isAvailable() && Shizuku.checkSelfPermission() == Shizuku.PERMISSION_GRANTED
+        isAvailable() && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
     fun readWakeSettings(): WakeSettings? {
