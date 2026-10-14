@@ -11,6 +11,7 @@
         android:label="耳边"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Erbian"
+        android:usesCleartextTraffic="true"
         android:hardwareAccelerated="true"
         android:allowBackup="false">
 
