@@ -15,7 +15,7 @@ W=${SIZE%x*}; H=${SIZE#*x}
 echo "screen=${W}x${H}" | tee -a "$D"
 
 dump() {
-  $ADB shell uiautomator dump /sdcard/ui.xml > "$EV/ui_dump_out.txt" 2>&1 || true
+  timeout 40 $ADB shell uiautomator dump /sdcard/ui.xml > "$EV/ui_dump_out.txt" 2>&1 || true
   local X
   X=$($ADB shell cat /sdcard/ui.xml 2>/dev/null || true)
   [ -z "$X" ] && { echo "-- dump empty: $(cat "$EV/ui_dump_out.txt")" >> "$D"; }
@@ -57,14 +57,14 @@ tap_page() { # $1=index -> dump to /tmp, find bounds, tap
     echo "  tap_page $1: node not found" >> "$D"
     return 1
   fi
-  $ADB shell input tap $C
+  timeout 15 $ADB shell input tap $C
 }
 
 FAIL=0
 
-$ADB shell am force-stop $PKG
+timeout 20 $ADB shell am force-stop $PKG
 sleep 1
-$ADB shell am start -n $PKG/.ui.MainActivity >/dev/null
+timeout 20 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null
 sleep 4
 
 # 1 频道页
@@ -84,11 +84,11 @@ for mm in re.finditer(r'text="说点什么"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(
 PYEOF
 )
 if [ -n "$INP" ]; then
-  $ADB shell input tap $INP
+  timeout 15 $ADB shell input tap $INP
   sleep 1
-  $ADB shell input text "ceshi_jilu"
+  timeout 15 $ADB shell input text "ceshi_jilu"
   sleep 1
-  $ADB shell input keyevent 66
+  timeout 15 $ADB shell input keyevent 66
   sleep 2
 fi
 DUMP=$(dump)
