@@ -17,6 +17,8 @@ cat "$EV/screen_state.txt" || true
 
 echo "== [1] install =="
 $ADB install -r app/build/outputs/apk/debug/app-debug.apk | tee "$EV/install.txt"
+$ADB shell pm grant $PKG android.permission.READ_CALENDAR 2>/dev/null || true
+$ADB shell pm grant $PKG android.permission.WRITE_CALENDAR 2>/dev/null || true
 
 echo "== [2] launch app + baseline screenshot =="
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null
@@ -46,9 +48,13 @@ sleep 4
 $ADB shell "dumpsys window | grep -iE 'erbian|VoiceInter|Assist'" > "$EV/assist_window.txt" || true
 $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_wake.txt" 2>&1 || true
 $ADB exec-out screencap -p > "$EV/02_wake.png"
+sleep 1
+$ADB exec-out screencap -p > "$EV/02_wake.png"   # 双帧取后者（软件渲染首帧常黑）
 $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true
 grep -E "session|onNewSession|panel attached|powerLongPress" "$EV/wake_logcat.txt" > "$EV/session_evidence.txt" || true
-cat "$EV/session_evidence.txt" || true
+$ADB shell run-as $PKG sh -c 'cat files/logs/app-*.log 2>/dev/null | tail -60' > "$EV/session_applog.txt" 2>/dev/null || true
+echo "--- applog tail ---" >> "$EV/session_applog.txt"
+cat "$EV/session_applog.txt" || true
 $ADB shell input keyevent KEYCODE_BACK || true
 
 echo "== [5] direct ASSIST intent probe =="
