@@ -44,6 +44,8 @@ echo "== [4] long-press power key (behavior=5 -> our assist service) =="
 bash scripts/wake-screen.sh
 timeout 15 $ADB logcat -c || true
 timeout 20 $ADB shell dumpsys -l 2>/dev/null | grep -i voice > "$EV/voice_services_list.txt" || true
+timeout 20 $ADB shell dumpsys voiceinteraction > "$EV/vie_dump.txt" 2>&1 || true
+timeout 20 $ADB shell cmd voiceinteraction > "$EV/cmd_vie_out.txt" 2>&1 || true
 timeout 20 $ADB shell input keyevent --longpress KEYCODE_POWER
 sleep 4
 $ADB shell "dumpsys window | grep -iE 'erbian|VoiceInter|Assist'" > "$EV/assist_window.txt" || true
@@ -61,9 +63,11 @@ cat "$EV/session_ui_evidence.txt" >> "$EV/session_evidence.txt" 2>/dev/null || t
 timeout 25 $ADB shell run-as $PKG sh -c 'tail -20 files/logs/app-*.log' > "$EV/session_applog.txt" 2>>"$EV/session_applog.txt" || true
 echo "--- applog tail ---" >> "$EV/session_applog.txt"
 cat "$EV/session_applog.txt" || true
-echo "== [4c] cmd voice_interaction probe =="
-timeout 20 $ADB shell cmd voice_interaction > "$EV/cmd_vie_out.txt" 2>&1 || true
-head -20 "$EV/cmd_vie_out.txt" || true
+echo "== [4c] cmd voiceinteraction probe =="
+head -25 "$EV/cmd_vie_out.txt" || true
+echo "== [4d] run-as identity probe =="
+timeout 20 $ADB shell "run-as $PKG id" > "$EV/runas_id.txt" 2>&1 || true
+timeout 25 $ADB shell "run-as $PKG sh -c 'tail -20 files/logs/app-*.log'" >> "$EV/session_applog.txt" 2>&1 || true
 
 echo "== [5] direct ASSIST intent probe =="
 bash scripts/wake-screen.sh

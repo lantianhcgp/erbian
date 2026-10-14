@@ -96,7 +96,7 @@ echo "-- after send --" >> "$D"
 if has "$DUMP" "ceshi_jilu"; then echo "OK: send bubble" >> "$D"; else echo "MISS: send bubble" >> "$D"; FAIL=1; fi
 
 # 3 导航三页
-for item in "1:耳边待办" "2:画像还没有" "3:唤醒状态"; do
+for item in "1:耳边待办" "2:刷新" "3:唤醒状态"; do
   idx=${item%%:*}; marker=${item#*:}
   tap_page "$idx" || true
   sleep 2

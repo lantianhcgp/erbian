@@ -53,9 +53,9 @@ fun SchedulePage(vm: AppViewModel) {
         if (!permitted) launcher.launch(Manifest.permission.READ_CALENDAR)
     }
     LaunchedEffect(permitted) {
-        if (!permitted) { calNote = "没有日历权限，下面只显示待确认项"; return@LaunchedEffect }
+        if (!permitted) { calNote = "没有日历权限，下面只显示待确认项「耳边待办」"; return@LaunchedEffect }
         events = runCatching { queryErbianEvents(context) }.getOrElse {
-            calNote = "日历读取失败：${it.message}"; emptyList()
+            calNote = "「耳边待办」日历读取失败：${it.message}"; emptyList()
         }
         if (events.isEmpty() && calNote.isEmpty()) calNote = "日历里还没有「耳边待办」，跟我说点要做的事就会有"
     }
@@ -108,24 +108,35 @@ fun SchedulePage(vm: AppViewModel) {
 }
 
 private fun queryErbianEvents(context: android.content.Context): List<CalEvent> {
-    val proj = arrayOf(
-        CalendarContract.Events.TITLE,
-        CalendarContract.Events.DTSTART,
-        CalendarContract.Events.ALL_DAY,
-        CalendarContract.Calendars.NAME,
-    )
     val out = mutableListOf<CalEvent>()
     val dayFmt = SimpleDateFormat("M月d日 EEEE", Locale.CHINA)
     val timeFmt = SimpleDateFormat("HH:mm", Locale.CHINA)
+    // 先取「耳边待办」日历 id（不能把 Calendars 列混进 Events 投影——没有 join 会抛异常）
+    val calIds = mutableSetOf<String>()
     context.contentResolver.query(
-        CalendarContract.Events.CONTENT_URI, proj,
-        "${CalendarContract.Events.DELETED}!=1", null,
+        CalendarContract.Calendars.CONTENT_URI,
+        arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.NAME),
+        null, null, null,
+    )?.use { c ->
+        val idIdx = c.getColumnIndex(CalendarContract.Calendars._ID)
+        val nameIdx = c.getColumnIndex(CalendarContract.Calendars.NAME)
+        while (c.moveToNext()) {
+            if ((c.getString(nameIdx) ?: "").contains("耳边待办")) calIds.add(c.getString(idIdx))
+        }
+    }
+    if (calIds.isEmpty()) return out
+    val idList = calIds.joinToString(",")
+    context.contentResolver.query(
+        CalendarContract.Events.CONTENT_URI,
+        arrayOf(CalendarContract.Events.TITLE, CalendarContract.Events.DTSTART, CalendarContract.Events.ALL_DAY),
+        "${CalendarContract.Events.CALENDAR_ID} IN ($idList) AND ${CalendarContract.Events.DELETED}!=1",
+        null,
         "${CalendarContract.Events.DTSTART} ASC",
     )?.use { c ->
-        val titleIdx = 0; val startIdx = 1; val allDayIdx = 2; val calNameIdx = 3
+        val titleIdx = c.getColumnIndex(CalendarContract.Events.TITLE)
+        val startIdx = c.getColumnIndex(CalendarContract.Events.DTSTART)
+        val allDayIdx = c.getColumnIndex(CalendarContract.Events.ALL_DAY)
         while (c.moveToNext()) {
-            val calName = c.getString(calNameIdx) ?: continue
-            if (!calName.contains("耳边待办")) continue
             val start = c.getLong(startIdx)
             val allDay = c.getInt(allDayIdx) == 1
             out.add(
