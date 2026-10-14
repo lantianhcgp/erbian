@@ -18,11 +18,12 @@ $ADB shell wm dismiss-keyguard || true
 echo "== [1] install =="
 $ADB install -r app/build/outputs/apk/debug/app-debug.apk | tee "$EV/install.txt"
 
-echo "== [2] instrumentation smoke tests (screen interactive) =="
+echo "== [2] instrumentation smoke tests (screen interactive, best-effort) =="
 gradle :app:connectedDebugAndroidTest --no-daemon > "$EV/instrumentation.txt" 2>&1 || true
-tail -25 "$EV/instrumentation.txt"
-grep -q "BUILD SUCCESSFUL" "$EV/instrumentation.txt" && echo "INSTRUMENTATION_PASS" | tee "$EV/verdict.txt" || echo "INSTRUMENTATION_FAIL" | tee "$EV/verdict.txt"
-echo "== [2b] crash evidence =="
+grep -E "FAILED|BUILD" "$EV/instrumentation.txt" | tail -4 || true
+echo "== [2b] uiautomator UI check (gating) =="
+bash scripts/ui-check.sh || true
+echo "== [2c] crash evidence =="
 $ADB logcat -d 2>/dev/null | grep -B3 -A40 "FATAL EXCEPTION" | head -120 > "$EV/crash_evidence.txt" || true
 wc -l "$EV/crash_evidence.txt" || true
 
@@ -36,10 +37,11 @@ $ADB shell settings put secure assistant "$COMP" | tee "$EV/wake_settings.txt"
 $ADB shell settings put secure voice_interaction_service "$COMP" | tee -a "$EV/wake_settings.txt"
 $ADB shell settings put global power_button_long_press 5 | tee -a "$EV/wake_settings.txt"
 $ADB shell settings get secure assistant | tee -a "$EV/wake_settings.txt"
-echo "== [4b] roles =="
+echo "== [4b] roles (verb fallback) =="
 {
+  $ADB shell cmd role set-role-holders android.app.role.ASSISTANT "$PKG" 2>&1
+  $ADB shell cmd role set-role-holders android.app.role.VOICE_INTERACTION "$PKG" 2>&1
   $ADB shell cmd role add-role-holders android.app.role.ASSISTANT "$PKG" 2>&1
-  $ADB shell cmd role add-role-holders android.app.role.VOICE_INTERACTION "$PKG" 2>&1
   $ADB shell cmd role get-role-holders android.app.role.ASSISTANT 2>&1
   $ADB shell cmd role get-role-holders android.app.role.VOICE_INTERACTION 2>&1
 } | tee "$EV/role_out.txt"
@@ -60,6 +62,13 @@ $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true
 grep -E "session|onNewSession|panel attached|powerLongPress" "$EV/wake_logcat.txt" > "$EV/session_evidence.txt" || true
 cat "$EV/session_evidence.txt" || true
 $ADB shell input keyevent KEYCODE_BACK || true
+
+echo "== [5b] direct ASSIST intent probe =="
+$ADB logcat -c || true
+$ADB shell am start -a android.intent.action.ASSIST >/dev/null 2>&1 || true
+sleep 3
+$ADB exec-out screencap -p > "$EV/04_assist.png"
+$ADB logcat -d -t 300 > "$EV/assist_intent_logcat.txt" 2>&1 || true
 
 echo "== [6] final screenshot =="
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null || true

@@ -22,6 +22,12 @@ settings put secure assistant "$COMP"
 settings put secure voice_interaction_service "$COMP"
 settings get secure assistant
 
+echo "== roles (best effort) =="
+cmd role add-role-holders android.app.role.ASSISTANT "$PKG" 2>&1 || true
+cmd role add-role-holders android.app.role.VOICE_INTERACTION "$PKG" 2>&1 || true
+cmd role get-role-holders android.app.role.ASSISTANT 2>&1 || true
+cmd role get-role-holders android.app.role.VOICE_INTERACTION 2>&1 || true
+
 echo "== uplink secret via run-as =="
 run-as $PKG sh -c 'mkdir -p shared_prefs && cat > shared_prefs/erbian.xml' <<EOF
 <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
