@@ -78,13 +78,19 @@ echo "== [4d] run-as identity probe =="
 timeout 20 $ADB shell "run-as $PKG id" > "$EV/runas_id.txt" 2>&1 || true
 timeout 25 $ADB shell "run-as $PKG sh -c 'tail -20 files/logs/app-*.log'" >> "$EV/session_applog.txt" 2>&1 || true
 
-echo "== [5] direct ASSIST intent probe =="
+echo "== [5] ASSIST intent = gating wake-chain check (dual-route: activity route shows WakePanel) =="
 bash scripts/wake-screen.sh
 timeout 15 $ADB logcat -c || true
-$ADB shell am start -a android.intent.action.ASSIST >/dev/null 2>&1 || true
+timeout 20 $ADB shell am start -a android.intent.action.ASSIST > "$EV/assist_start_out.txt" 2>&1 || true
 sleep 3
 timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
+sleep 1
+timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
 timeout 30 $ADB logcat -d -t 300 > "$EV/assist_intent_logcat.txt" 2>&1 || true
+timeout 40 $ADB shell uiautomator dump /sdcard/ui_assist.xml > /dev/null 2>&1 || true
+WAKE_HIT=$(timeout 20 $ADB shell cat /sdcard/ui_assist.xml 2>/dev/null | grep -c 'text="发送"' || true)
+echo "wake_panel_textsend=${WAKE_HIT:-0}" | tee "$EV/wake_ui_gate.txt"
+if [ "${WAKE_HIT:-0}" -ge 1 ]; then echo "WAKE_UI_PASS" >> "$EV/verdict.txt"; else echo "WAKE_UI_FAIL" >> "$EV/verdict.txt"; fi
 
 echo "== [6] final screenshot =="
 bash scripts/wake-screen.sh
