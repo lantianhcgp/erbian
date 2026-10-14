@@ -44,7 +44,7 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
     // SDK35 真实签名: onShow(Bundle args, int showFlags)；收起用 hide()
     override fun onShow(args: android.os.Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        val parent = window?.decorView as? ViewGroup ?: return
+        val parent = window?.window?.decorView as? ViewGroup ?: return
         parent.removeAllViews()
         parent.addView(SessionPanelView(ctx, onDismiss = { hide() }))
     }
