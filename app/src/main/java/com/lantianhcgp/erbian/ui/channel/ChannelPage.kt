@@ -175,8 +175,6 @@ private fun InputContainer(value: String, onValueChange: (String) -> Unit, onSen
                     unfocusedContainerColor = Color.Transparent,
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
                 ),
                 shape = RoundedCornerShape(16),
             )
