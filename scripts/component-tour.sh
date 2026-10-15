@@ -102,7 +102,11 @@ launch() { # 确保 App 真在前台。start/force-stop 用与 ui-check 逐字�
       dko=$(timeout 20 adb shell wm dismiss-keyguard 2>&1 | tr -d '\r' | head -1)
       echo "  kg-state: $kg | dismiss-out=$dko"
       timeout 25 adb logcat -d -b crash -t 60 2>/dev/null | tr -d '\r' | grep -B2 -A18 "erbian" | head -40 > "$EV/crash_at_launch.txt" || true
-      echo "  crash-archived lines=$(wc -l < "$EV/crash_at_launch.txt" 2>/dev/null || echo 0)"
+      pmp=$(timeout 20 adb shell pm path $PKG 2>&1 | tr -d '\r' | head -2)
+      acts=$(timeout 25 adb shell dumpsys activity activities 2>/dev/null | tr -d '\r' | grep -iE "erbian|topResumed" | head -6)
+      lcz=$(timeout 20 adb logcat -d -t 300 2>/dev/null | tr -d '\r' | grep -iE "erbian|ActivityTaskManager.*START" | grep -viE "chatty" | tail -12)
+      { echo "pm-path: $pmp"; echo "activities: $acts"; echo "logcat: $lcz"; } > "$EV/launch_probe.txt"
+      echo "  probe archived"
     fi
     timeout 20 adb shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
     timeout 20 adb shell wm dismiss-keyguard 2>/dev/null || true
