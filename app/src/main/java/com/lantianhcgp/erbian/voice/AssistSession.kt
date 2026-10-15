@@ -63,7 +63,7 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
     }
 
     private fun showOverlay() {
-        val wm = ctx.getSystemService(android.content.WindowManager::class.java)
+        val wm = ctx.getSystemService(android.view.WindowManager::class.java)
         val params = android.view.WindowManager.LayoutParams(
             android.view.ViewGroup.LayoutParams.MATCH_PARENT,
             android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
