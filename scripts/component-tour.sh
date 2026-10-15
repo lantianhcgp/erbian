@@ -101,6 +101,8 @@ launch() { # 确保 App 真在前台。start/force-stop 用与 ui-check 逐字�
       kg=$(timeout 20 adb shell dumpsys window 2>/dev/null | tr -d '\r' | grep -iE "mShowingLockscreen|isKeyguardShowing|KeyguardController|mKeyguard" | head -4)
       dko=$(timeout 20 adb shell wm dismiss-keyguard 2>&1 | tr -d '\r' | head -1)
       echo "  kg-state: $kg | dismiss-out=$dko"
+      timeout 25 adb logcat -d -b crash -t 60 2>/dev/null | tr -d '\r' | grep -B2 -A18 "erbian" | head -40 > "$EV/crash_at_launch.txt" || true
+      echo "  crash-archived lines=$(wc -l < "$EV/crash_at_launch.txt" 2>/dev/null || echo 0)"
     fi
     timeout 20 adb shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
     timeout 20 adb shell wm dismiss-keyguard 2>/dev/null || true
