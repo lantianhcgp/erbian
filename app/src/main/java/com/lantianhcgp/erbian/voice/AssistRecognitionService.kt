@@ -1,6 +1,8 @@
 package com.lantianhcgp.erbian.voice
 
-import android.service.voice.VoiceRecognitionService
+import android.app.Service
+import android.content.Intent
+import android.os.IBinder
 
 /**
  * 识别服务桩：耳边只做文本输入（转写交给输入法，设计文档 §一），从不做人声识别。
@@ -8,7 +10,8 @@ import android.service.voice.VoiceRecognitionService
  * "Bad voice interaction service: No recognitionService specified"，
  * VoiceInteractionServiceInfo 解析失败 → mComponentInfo=null → showSession NPE，
  * 长按唤醒永远不会到达 App（2026-10-15 真机 logcat 实锤）。
- * 本桩只满足校验；识别被调起时基类自行处理，我们永不调用。
+ * 校验器只检查该组件能作为服务解析；识别永不被调起，onBind 返回 null 即可。
  */
-class AssistRecognitionService : VoiceRecognitionService() {
+class AssistRecognitionService : Service() {
+    override fun onBind(intent: Intent?): IBinder? = null
 }
