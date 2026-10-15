@@ -91,10 +91,11 @@ launch() { # 确保 App 真在前台（force-stop 后锁屏会让 start 躲在�
   sleep 1
   local i pkg
   for i in 1 2 3 4 5 6; do
-    R "am start -n $PKG/.ui.MainActivity > /dev/null"
+    ao=$(R "am start -n $PKG/.ui.MainActivity -W" 2>&1 | tr -d '\r' | grep -E 'Status|Error|Complete|Warning' | head -3)
     sleep 3
-    pkg=$(R "dumpsys window | grep -m1 mCurrentFocus" | grep -o 'com\.[a-zA-Z.]*' | head -1)
-    echo "  launch try$i focus=$pkg"
+    raw=$(R "dumpsys window | grep mCurrentFocus" | tr -d '\r' | head -2)
+    pkg=$(echo "$raw" | grep -o 'com\.[a-zA-Z.]*' | head -1)
+    echo "  launch try$i focus=$pkg | amW=$ao | raw=$raw"
     case "$pkg" in *lantianhcgp.erbian*) return 0 ;; esac
     R "input keyevent KEYCODE_WAKEUP"
     R "wm dismiss-keyguard"
