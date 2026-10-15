@@ -9,8 +9,14 @@ PKG=com.lantianhcgp.erbian
 mkdir -p "$EV"
 source scripts/shot.sh
 
-R() { echo "$1" | timeout 40 "$RISH_T" 2>/dev/null || true; }
-RISH_T="$HOME/rish/rish_t"
+# 设备命令双模：手机上用 rish，CI runner 上用 adb（r​​ish 不存在曾致全链静默空跑）
+R() {
+  if [ -x "$HOME/rish/rish_t" ]; then
+    echo "$1" | timeout 40 "$HOME/rish/rish_t" 2>/dev/null || true
+  else
+    timeout 40 adb shell sh -c "$1" 2>/dev/null || true
+  fi
+}
 
 bounds_desc() { # $1=dump-file-on-device $2=selector like: desc=1 / text=说点什么
   local dev="$1" sel="$2"
@@ -40,8 +46,16 @@ tap_sel() {
   echo "  tap $2 -> $cx $cy"
 }
 
-dump_dev() { # $1=设备路径
-  R "uiautomator dump $1 > /dev/null 2>&1"
+dump_dev() { # $1=设备路径（空取会自检并重试1次）
+  local i n=0
+  for i in 1 2 3; do
+    R "uiautomator dump $1 > /dev/null 2>&1"
+    n=$(R "ls -la $1 | head -1" | grep -o '[0-9]\+' | head -1)
+    [ "${n:-0}" -gt 1000 ] 2>/dev/null && { echo "  dump $1 bytes=$n"; return 0; }
+    sleep 2
+  done
+  echo "  dump FAIL $1 (bytes=${n:-0})"
+  return 1
 }
 
 launch() {
