@@ -4,6 +4,7 @@
 cd "$(dirname "$0")/.."
 EV=build/acceptance
 ADB="adb"
+BD_TMP=/tmp/bd.xml
 PKG=com.lantianhcgp.erbian
 mkdir -p "$EV"
 source scripts/shot.sh
