@@ -68,8 +68,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         assistModeState = intent?.isAssist() == true
-        val vm: AppViewModel = viewModel()
         setContent {
+            val vm: AppViewModel = viewModel()
             ErbianTheme(
                 dynamicColor = vm.config.dynamicColor,
                 pureBlack = vm.config.pureBlack,
