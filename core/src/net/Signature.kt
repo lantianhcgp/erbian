@@ -14,7 +14,7 @@ object Signature {
         return sb.toString()
     }
 
-    const val HEADER = "X-Erbian-Signature"
+    const val HEADER = "X-Webhook-Signature-V2"
 }
 
 /**
