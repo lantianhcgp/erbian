@@ -58,20 +58,32 @@ import model.Message
 import model.MsgKind
 
 class MainActivity : ComponentActivity() {
+
+    // onNewIntent 复用场景（App 已在前台时长按电源）也要切到面板 —— v1.6 真机实锤的 bug
+    private var assistModeState by androidx.compose.runtime.mutableStateOf(false)
+
+    private fun Intent.isAssist() =
+        action == Intent.ACTION_ASSIST || action == "android.intent.action.VOICE_COMMAND"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val assistMode = intent?.action == Intent.ACTION_ASSIST ||
-            intent?.action == "android.intent.action.VOICE_COMMAND"
+        assistModeState = intent?.isAssist() == true
+        val vm: AppViewModel = viewModel()
         setContent {
-            val vm: AppViewModel = viewModel()
             ErbianTheme(
                 dynamicColor = vm.config.dynamicColor,
                 pureBlack = vm.config.pureBlack,
             ) {
-                if (assistMode) AssistPanelScreen(vm) { finish() }
+                if (assistModeState) AssistPanelScreen(vm) { finish() }
                 else HomeScreen(vm)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        assistModeState = intent.isAssist()
     }
 }
 
