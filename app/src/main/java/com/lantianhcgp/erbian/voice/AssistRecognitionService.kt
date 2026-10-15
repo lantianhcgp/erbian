@@ -1,6 +1,5 @@
 package com.lantianhcgp.erbian.voice
 
-import android.content.Intent
 import android.service.voice.VoiceRecognitionService
 
 /**
@@ -12,8 +11,4 @@ import android.service.voice.VoiceRecognitionService
  * 本桩只满足校验；识别被调起时基类自行处理，我们永不调用。
  */
 class AssistRecognitionService : VoiceRecognitionService() {
-    @Suppress("unused")
-    constructor() : super()
-    @Suppress("unused")
-    constructor(intent: Intent) : super(intent)
 }
