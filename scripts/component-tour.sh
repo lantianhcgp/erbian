@@ -118,7 +118,7 @@ launch() { # 确保 App 真在前台。start/force-stop 用与 ui-check 逐字�
 }
 
 # 巡检自装（实测: instrumentation 收尾会卸掉主包 — pm path 空/START -92/Invalid packageName）
-APK=build/app/outputs/apk/debug/app-debug.apk
+APK=app/build/outputs/apk/debug/app-debug.apk
 if [ -f "$APK" ]; then
   timeout 180 adb install -r "$APK" > "$EV/tour_install.txt" 2>&1 || true
 else
