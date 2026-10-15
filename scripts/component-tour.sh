@@ -1,7 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # 组件级巡检（用户要求 2026-10-15）：以组件为单位逐状态截图，供 agent 放大逐一目检
 # 状态: T01频道 T02输入中 T03已发送+气泡 T04长按菜单 T05日程 T06画像(样本卡+展开) T07设置 T08唤醒面板 T09面板输入中
-set -e
 cd "$(dirname "$0")/.."
 EV=build/acceptance
 ADB="adb"
@@ -46,16 +45,19 @@ tap_sel() {
   echo "  tap $2 -> $cx $cy"
 }
 
-dump_dev() { # $1=设备路径（空取会自检并重试1次）
-  local i n=0
+dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败（set -e 已撤）
+  local i out n=0
   for i in 1 2 3; do
-    R "uiautomator dump $1 > /dev/null 2>&1"
-    n=$(R "ls -la $1 | head -1" | grep -o '[0-9]\+' | head -1)
-    [ "${n:-0}" -gt 1000 ] 2>/dev/null && { echo "  dump $1 bytes=$n"; return 0; }
+    out=$(R "uiautomator dump $1" 2>&1 | tr -d '\r')
+    n=$(R "wc -c < $1" 2>/dev/null | tr -d '\r' | tr -dc '0-9')
+    if [ "${n:-0}" -gt 1000 ] 2>/dev/null; then
+      echo "  dump $1 bytes=$n (${out:0:40})"
+      return 0
+    fi
     sleep 2
   done
-  echo "  dump FAIL $1 (bytes=${n:-0})"
-  return 1
+  echo "  dump FAIL $1 bytes=${n:-0} out=${out:0:60}"
+  return 0
 }
 
 launch() {
