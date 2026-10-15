@@ -97,8 +97,14 @@ launch() { # 确保 App 真在前台。start/force-stop 用与 ui-check 逐字�
     pkg=$(timeout 20 adb shell dumpsys window | tr -d '\r' | grep -m1 mCurrentFocus | grep -o 'com\.[a-zA-Z.]*' | head -1)
     echo "  launch try$i focus=$pkg | am=$out"
     case "$pkg" in *lantianhcgp.erbian*) return 0 ;; esac
+    if [ $i -eq 1 ]; then
+      kg=$(timeout 20 adb shell dumpsys window 2>/dev/null | tr -d '\r' | grep -iE "mShowingLockscreen|isKeyguardShowing|KeyguardController|mKeyguard" | head -4)
+      dko=$(timeout 20 adb shell wm dismiss-keyguard 2>&1 | tr -d '\r' | head -1)
+      echo "  kg-state: $kg | dismiss-out=$dko"
+    fi
     timeout 20 adb shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
     timeout 20 adb shell wm dismiss-keyguard 2>/dev/null || true
+    timeout 20 adb shell input keyevent 82 2>/dev/null || true
     sleep 2
   done
   echo "  launch WARN: app not foreground after retries"
