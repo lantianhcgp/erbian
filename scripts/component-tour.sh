@@ -20,14 +20,19 @@ R() {
 }
 
 bounds_desc() { # $1=dump-file-on-device $2=selector like: desc=1 / text=说点什么
-  local dev="$1" sel="$2"
-  local pat
+  # 策略: pull 到本地再 grep（adb 传输内嵌引号命令链屡出怪相，本地路径已实证可靠）
+  local sel="$2" pat
   case "$sel" in
     desc=*) pat="content-desc=\"${sel#desc=}\"" ;;
     text=*) pat="text=\"${sel#text=}\"" ;;
     *) pat="$sel" ;;
   esac
-  R "cat $dev | grep -o '$pat[^/]*bounds=\"\[[0-9,]*\]\[[0-9,]*\]\" | head -1" | grep -o '\[[0-9,]*\]\[[0-9,]*\]' | tail -1
+  if [ -x "$HOME/rish/rish_t" ]; then
+    R "cat $1" | grep -o "$pat[^/]*bounds=\"\[[0-9,]*\]\[[0-9,]*\]\"" | head -1 | grep -o '\[[0-9,]*\]\[[0-9,]*\]' | tail -1
+  else
+    adb pull "$1" "$BD_TMP" >/dev/null 2>&1 || true
+    grep -o "$pat[^/]*bounds=\"\[[0-9,]*\]\[[0-9,]*\]\"" "$BD_TMP" 2>/dev/null | head -1 | grep -o '\[[0-9,]*\]\[[0-9,]*\]' | tail -1 || true
+  fi
 }
 
 tap_sel() { # $1=dump $2=selector
