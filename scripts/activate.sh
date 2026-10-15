@@ -15,6 +15,8 @@ pm grant $PKG android.permission.READ_CALENDAR 2>&1 || true
 pm grant $PKG android.permission.WRITE_CALENDAR 2>&1 || true
 pm grant $PKG android.permission.POST_NOTIFICATIONS 2>&1 || true
 
+echo "== MIUI background-popup op (10021) — package update resets it == "
+cmd appops set com.lantianhcgp.erbian 10021 allow || true
 echo "== wake settings =="
 settings put system long_press_power_key none
 settings put global power_button_long_press 5

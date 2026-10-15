@@ -42,32 +42,18 @@ import kotlinx.coroutines.launch
  */
 class AssistSession(private val ctx: android.content.Context) : VoiceInteractionSession(ctx) {
 
+    // 小爱同款体验（用户预期 2026-10-15）：会话窗口自己长面板，不跳任何页面。
+    // 官方通道 = onCreateContentView()（v1.7 往 decorView 手塞视图时机不对永不显示；
+    // v1.8 的 activity 桥接被用户否掉——要的是"在当前 App 上方弹窗"）。
+    override fun onCreateContentView(): android.view.View? {
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onCreateContentView -> SessionPanelView")
+        return SessionPanelView(ctx, onDismiss = { hide() })
+    }
+
     // SDK35 真实签名: onShow(Bundle args, int showFlags)；收起用 hide()
-    // 实战结论（2026-10-15 真机）：MIUI 不给第三方会话窗口上屏（panel attached 但不可见），
-    // 而 ASSIST activity 路由的 WakePanel 稳定可见 → 会话只做桥：拉起我们自己的面板页后自收。
     override fun onShow(args: android.os.Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        com.lantianhcgp.erbian.Locator.logger.i("session", "onShow flags=$showFlags -> bridge to assist activity")
-        val launched = runCatching {
-            val i = android.content.Intent(ctx, MainActivity::class.java).apply {
-                action = android.content.Intent.ACTION_ASSIST
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            ctx.startActivity(i)
-            true
-        }.getOrDefault(false)
-        if (!launched) {
-            val parent = window?.window?.decorView as? ViewGroup
-            if (parent == null) {
-                com.lantianhcgp.erbian.Locator.logger.e("session", "decorView not a ViewGroup: $window")
-                return
-            }
-            parent.removeAllViews()
-            parent.addView(SessionPanelView(ctx, onDismiss = { hide() }))
-            com.lantianhcgp.erbian.Locator.logger.i("session", "panel attached (fallback)")
-            return
-        }
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ finish() }, 400)
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onShow flags=$showFlags (panel via onCreateContentView)")
     }
 }
 
