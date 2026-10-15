@@ -51,5 +51,18 @@ shot() { # $1=输出路径（绝对）
     $ADB shell input keyevent KEYCODE_SLEEP >/dev/null 2>&1 || true
     sleep 1
   done
+  # screencap 三连黑 → screenrecord 管线兜底（MediaCodec 路径，与 SF 截屏不同源）
+  $ADB shell input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true
+  $ADB shell wm dismiss-keyguard >/dev/null 2>&1 || true
+  $ADB shell settings put system screen_brightness 255 >/dev/null 2>&1 || true
+  sleep 1
+  $ADB shell "screenrecord --time-limit 2 --bit-rate 4000000 /sdcard/_shot.mp4" >/dev/null 2>&1 || true
+  $ADB pull /sdcard/_shot.mp4 "$OUT.mp4" >/dev/null 2>&1 || true
+  if [ -s "$OUT.mp4" ]; then
+    ffmpeg -y -loglevel error -i "$OUT.mp4" -vframes 1 "$OUT" >/dev/null 2>&1 || true
+    b=$(shot_brightness "$OUT" 2>/dev/null)
+    echo "screenrecord mean=$b -> $OUT" >> "${OUT}.check"
+    case "$b" in ''|INVALID|EMPTY|ERR) ;; *) return 0 ;; esac
+  fi
   return 1
 }

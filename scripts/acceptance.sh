@@ -13,7 +13,11 @@ COMP=$PKG/$PKG.voice.AssistInteractionService
 
 echo "== [0] pin screen on =="
 bash scripts/wake-screen.sh
-$ADB shell dumpsys power | grep -E "mWakefulness=|mScreenOn" | head -3 > "$EV/screen_state.txt" || true
+{
+  $ADB shell dumpsys power | grep -E "mWakefulness=|mScreenOn" | head -3
+  $ADB shell dumpsys display 2>/dev/null | grep -E "mScreenState|mState=" | head -3
+  $ADB shell settings get system screen_brightness
+} > "$EV/screen_state.txt" 2>&1 || true
 cat "$EV/screen_state.txt" || true
 
 echo "== [1] install =="
