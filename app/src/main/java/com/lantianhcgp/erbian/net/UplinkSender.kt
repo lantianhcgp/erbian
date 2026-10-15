@@ -75,7 +75,12 @@ class UplinkSender(
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             if (secret.isNotEmpty()) {
-                conn.setRequestProperty(Signature.HEADER, Signature.hmacSha256Hex(secret, body))
+                // Hermes webhook 标准验签 V2: HMAC-SHA256("<秒级时间戳>.<body>")，
+                // 头 X-Webhook-Signature-V2 + X-Webhook-Timestamp（防重放）。
+                // 自造头 X-Erbian-Signature 网关不认 —— 2026-10-15 真机 E2E 实锤。
+                val ts = (System.currentTimeMillis() / 1000).toString()
+                conn.setRequestProperty("X-Webhook-Timestamp", ts)
+                conn.setRequestProperty(Signature.HEADER, Signature.hmacSha256Hex(secret, "$ts.$body"))
             }
             conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
             return conn.responseCode
