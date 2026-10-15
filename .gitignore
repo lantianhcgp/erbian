@@ -9,3 +9,4 @@ captures/
 .cxx/
 *.hprof
 # 注意: 不忽略 *.keystore（CI 缓存 debug.keystore 需要）
+tour.zip

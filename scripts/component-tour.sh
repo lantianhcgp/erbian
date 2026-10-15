@@ -13,7 +13,8 @@ R() {
   if [ -x "$HOME/rish/rish_t" ]; then
     echo "$1" | timeout 40 "$HOME/rish/rish_t" 2>/dev/null || true
   else
-    timeout 40 adb shell sh -c "$1" 2>/dev/null || true
+    # 坑: adb shell sh -c "$1" 会被 adb 拼接拆参(am 裸跑吐 help)——直接 adb shell <cmd>
+    timeout 40 adb shell $1 2>/dev/null || true
   fi
 }
 
@@ -49,7 +50,7 @@ dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败�
   local i out n=0
   for i in 1 2 3; do
     out=$(R "uiautomator dump $1" 2>&1 | tr -d '\r')
-    n=$(R "wc -c < $1" 2>/dev/null | tr -d '\r' | tr -dc '0-9')
+    n=$(R "wc -c $1" 2>/dev/null | tr -d '\r' | tr -dc '0-9')
     if [ "${n:-0}" -gt 1000 ] 2>/dev/null; then
       echo "  dump $1 bytes=$n (${out:0:40})"
       return 0
