@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.material.icons.outlined.Assessment
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Route
@@ -128,7 +130,7 @@ fun ChannelPage(vm: AppViewModel, onNavigate: (Int) -> Unit = {}) {
                         when (m.kind) {
                             MsgKind.SUMMARY -> SummaryBar(m)
                             MsgKind.TODO_CONFIRM -> TodoConfirmCard(m, vm)
-                            else -> Bubble(m, onResend = { vm.resend(m) })
+                            else -> Bubble(m, onResend = { vm.resend(m) }, onNotRight = { vm.send("这条不对：" + m.body) })
                         }
                     }
                 }
@@ -154,6 +156,12 @@ private fun ChannelHeader(vm: AppViewModel, onNavigate: (Int) -> Unit) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             // 页头导航（频道页无 dock，导航在页内切换；desc "0"-"3" 测试契约保留）
+            androidx.compose.material3.IconButton(
+                onClick = { vm.send("给我一份摘要：上次摘要之后的所有回复") },
+                modifier = Modifier.semantics { contentDescription = "摘要" },
+            ) {
+                Icon(Icons.Outlined.Assessment, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
+            }
             HeaderNavItem(0, onNavigate, Icons.Outlined.Route, "频道")
             HeaderNavItem(1, onNavigate, Icons.Outlined.CalendarMonth, "日程")
             HeaderNavItem(2, onNavigate, Icons.Outlined.Person, "画像")
@@ -240,20 +248,25 @@ private fun SendCircle(enabled: Boolean, sending: Boolean, onClick: () -> Unit) 
 
 /** 气泡：方向尾 + 发送状态行 */
 @Composable
-private fun Bubble(m: Message, onResend: () -> Unit) {
+private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit) {
     val isUser = m.origin in setOf("float", "channel")
+    var menuOpen by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scheme = MaterialTheme.colorScheme
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
+        androidx.compose.foundation.layout.Box {
         Surface(
             shape = if (isUser) RoundedCornerShape(18, 18, 4, 18)
             else RoundedCornerShape(18, 18, 18, 4),
             color = if (isUser) scheme.primaryContainer else scheme.surfaceContainerHigh,
             border = if (isUser) null else BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
             tonalElevation = 0.dp,
-            modifier = Modifier.widthIn(max = 300.dp),
+            modifier = Modifier
+                .widthIn(max = 300.dp)
+                .combinedClickable(onClick = {}, onLongClick = { menuOpen = true }),
         ) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                 Text(m.body, style = MaterialTheme.typography.bodyLarge)
@@ -274,6 +287,25 @@ private fun Bubble(m: Message, onResend: () -> Unit) {
                     }
                 }
             }
+        }
+        // 长按菜单（设计 §六：复制 / 重发 / 这条不对）
+        androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            androidx.compose.material3.DropdownMenuItem(
+                text = { Text("复制") },
+                onClick = {
+                    menuOpen = false
+                    runCatching {
+                        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("erbian-msg", m.body))
+                    }
+                },
+            )
+            if (isUser) {
+                androidx.compose.material3.DropdownMenuItem(text = { Text("重发") }, onClick = { menuOpen = false; onResend() })
+            } else {
+                androidx.compose.material3.DropdownMenuItem(text = { Text("这条不对") }, onClick = { menuOpen = false; onNotRight() })
+            }
+        }
         }
     }
 }
@@ -308,6 +340,7 @@ private fun TodoConfirmCard(m: Message, vm: AppViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PillButton("确认", onClick = { vm.send("确认：${m.body}") })
             PillButton("不用", onClick = { vm.send("不用了：${m.body}") }, filled = false)
+            PillButton("改写", onClick = { vm.send("帮我改写这条待办：" + m.body) }, filled = false)
         }
     }
 }

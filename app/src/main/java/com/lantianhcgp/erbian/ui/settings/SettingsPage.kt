@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -92,7 +93,24 @@ fun SettingsPage(vm: AppViewModel) {
                     fontSize = 13.sp,
                 )
             }
-            Text("用于唤醒设置自检自愈；未授权不影响核心收发", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+            val ctx = LocalContext.current
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("通知", fontSize = 13.sp)
+                Text(
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) "已授权"
+                    else "未授权（重要消息不弹通知）",
+                    fontSize = 13.sp,
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("日历读取", fontSize = 13.sp)
+                Text(
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CALENDAR) == android.content.pm.PackageManager.PERMISSION_GRANTED) "已授权"
+                    else "未授权（日程页降级显示）",
+                    fontSize = 13.sp,
+                )
+            }
+            Text("Shizuku 用于唤醒设置自检自愈；未授权不影响核心收发", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
         }
 
         // MCP
@@ -146,7 +164,7 @@ fun SettingsPage(vm: AppViewModel) {
         // 关于
         ErbianCard {
             CardTitle("关于")
-            Text("耳边 v1.0 · 仓库 lantianhcgp/erbian", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("耳边 v3.1 · 仓库 lantianhcgp/erbian", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("App 是耳朵，脑子在 Agent", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
         }
     }

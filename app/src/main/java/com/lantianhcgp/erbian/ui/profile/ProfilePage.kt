@@ -15,6 +15,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,7 +66,27 @@ fun ProfilePage(vm: AppViewModel) {
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         )
                         if (c.evidence.isNotEmpty()) {
-                            Text("「${c.evidence.last()}」", fontSize = 11.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, color = MaterialTheme.colorScheme.outline)
+                            var expanded by remember { mutableStateOf(false) }
+                            val shown = if (expanded) c.evidence else listOf(c.evidence.last())
+                            shown.forEach { e ->
+                                Text(
+                                    "「$e」",
+                                    fontSize = 11.sp,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.outline,
+                                    modifier = if (!expanded && c.evidence.size > 1) Modifier
+                                        .combinedClickable(onClick = {}, onLongClick = { expanded = true })
+                                        .semantics { contentDescription = "证据展开" } else Modifier,
+                                )
+                            }
+                            if (c.evidence.size > 1) {
+                                Text(
+                                    if (expanded) "收起" else "共${c.evidence.size}条证据，点按展开",
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable { expanded = !expanded },
+                                )
+                            }
                         }
                         Row(Modifier.padding(top = 6.dp)) {
                             PillButton("这条不对", onClick = { vm.send("画像这条不对：${c.title}") }, filled = false)
