@@ -79,7 +79,8 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
             runCatching { holder[0]?.let { v -> wm.removeView(v) } }
             hide()
         })
-        holder[0] = panel        runCatching {
+        holder[0] = panel
+        runCatching {
             wm.addView(panel, params)
             com.lantianhcgp.erbian.Locator.logger.i("session", "overlay panel added (over current app)")
         }.onFailure {
