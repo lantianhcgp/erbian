@@ -66,8 +66,10 @@ class MainActivity : ComponentActivity() {
         action == Intent.ACTION_ASSIST || action == "android.intent.action.VOICE_COMMAND"
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // assist 模式必须在 super 之前切透明主题，否则全屏不透明页（用户实测反馈）
         assistModeState = intent?.isAssist() == true
+        if (assistModeState) setTheme(com.lantianhcgp.erbian.R.style.Theme_Erbian_Assist)
+        super.onCreate(savedInstanceState)
         setContent {
             val vm: AppViewModel = viewModel()
             ErbianTheme(
@@ -83,7 +85,13 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        assistModeState = intent.isAssist()
+        val nowAssist = intent.isAssist()
+        if (nowAssist != assistModeState) {
+            assistModeState = nowAssist
+            // 主题切换需要重建：assist=透明浮层，普通=完整App
+            setTheme(if (nowAssist) com.lantianhcgp.erbian.R.style.Theme_Erbian_Assist else com.lantianhcgp.erbian.R.style.Theme_Erbian)
+            recreate()
+        }
     }
 }
 

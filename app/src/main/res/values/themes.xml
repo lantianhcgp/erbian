@@ -5,4 +5,16 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
+
+    <!-- 唤醒浮层模式：窗口透明，桌面/原应用透出，只留底部面板+自绘遮罩（弹窗效果） -->
+    <style name="Theme.Erbian.Assist" parent="Theme.Erbian">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">#66000000</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>
