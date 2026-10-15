@@ -2,6 +2,7 @@ package com.lantianhcgp.erbian.voice
 
 import android.os.Bundle
 import android.service.voice.VoiceInteractionSession
+import com.lantianhcgp.erbian.ui.MainActivity
 import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -42,17 +43,31 @@ import kotlinx.coroutines.launch
 class AssistSession(private val ctx: android.content.Context) : VoiceInteractionSession(ctx) {
 
     // SDK35 真实签名: onShow(Bundle args, int showFlags)；收起用 hide()
+    // 实战结论（2026-10-15 真机）：MIUI 不给第三方会话窗口上屏（panel attached 但不可见），
+    // 而 ASSIST activity 路由的 WakePanel 稳定可见 → 会话只做桥：拉起我们自己的面板页后自收。
     override fun onShow(args: android.os.Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        com.lantianhcgp.erbian.Locator.logger.i("session", "onShow args=$args flags=$showFlags window=$window")
-        val parent = window?.window?.decorView as? ViewGroup
-        if (parent == null) {
-            com.lantianhcgp.erbian.Locator.logger.e("session", "decorView not a ViewGroup: $window")
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onShow flags=$showFlags -> bridge to assist activity")
+        val launched = runCatching {
+            val i = android.content.Intent(ctx, MainActivity::class.java).apply {
+                action = android.content.Intent.ACTION_ASSIST
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            ctx.startActivity(i)
+            true
+        }.getOrDefault(false)
+        if (!launched) {
+            val parent = window?.window?.decorView as? ViewGroup
+            if (parent == null) {
+                com.lantianhcgp.erbian.Locator.logger.e("session", "decorView not a ViewGroup: $window")
+                return
+            }
+            parent.removeAllViews()
+            parent.addView(SessionPanelView(ctx, onDismiss = { hide() }))
+            com.lantianhcgp.erbian.Locator.logger.i("session", "panel attached (fallback)")
             return
         }
-        parent.removeAllViews()
-        parent.addView(SessionPanelView(ctx, onDismiss = { hide() }))
-        com.lantianhcgp.erbian.Locator.logger.i("session", "panel attached")
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ finish() }, 400)
     }
 }
 
