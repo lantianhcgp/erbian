@@ -117,6 +117,17 @@ launch() { # 确保 App 真在前台。start/force-stop 用与 ui-check 逐字�
   return 1
 }
 
+# 巡检自装（实测: instrumentation 收尾会卸掉主包 — pm path 空/START -92/Invalid packageName）
+APK=build/app/outputs/apk/debug/app-debug.apk
+if [ -f "$APK" ]; then
+  timeout 180 adb install -r "$APK" > "$EV/tour_install.txt" 2>&1 || true
+else
+  echo "APK missing: $APK" > "$EV/tour_install.txt"
+fi
+echo "tour-install: $(tail -1 "$EV/tour_install.txt" 2>/dev/null)"
+pp=$(timeout 20 adb shell pm path $PKG 2>/dev/null | tr -d '\r' | head -1)
+echo "pm-path-after-install: $pp"
+
 echo "== tour: T01 channel base =="
 launch
 dump_dev /sdcard/t01.xml
