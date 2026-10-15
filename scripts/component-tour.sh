@@ -150,10 +150,8 @@ if R "cat /sdcard/t02b.xml" 2>/dev/null | grep -qi "inputmethod"; then
 fi
 b=$(bounds_desc /sdcard/t02.xml 'desc=发送')
 if [ -n "$b" ]; then
-  cx=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[0]+n[2])//2)" "$b")
-  cy=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[1]+n[3])//2)" "$b")
-  R "input tap $cx $cy"
-  echo "  send tap -> $cx $cy"
+  R "input tap $b"   # b 已是 "cx cy" 中心点（bounds_desc 直接输出）
+  echo "  send tap -> $b"
 fi
 sleep 3
 dump_dev /sdcard/t03.xml
@@ -162,10 +160,8 @@ shot "$EV/T03-bubble.png" || true
 echo "== tour: T04 long-press bubble menu =="
 b=$(bounds_desc /sdcard/t03.xml 'text=component-tour-ok')
 if [ -n "$b" ]; then
-  cx=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[0]+n[2])//2)" "$b")
-  cy=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[1]+n[3])//2)" "$b")
-  R "input swipe $cx $cy $cx $cy 900"
-  echo "  longpress -> $cx $cy"
+  R "input swipe $b $b 1200"
+  echo "  longpress -> $b"
 fi
 sleep 2
 dump_dev /sdcard/t04.xml
@@ -181,9 +177,12 @@ shot "$EV/T05-schedule.png" || true
 
 echo "== tour: T06 profile with seeded card + evidence expand =="
 # 种样本卡（3条证据测折叠）
-R "run-as $PKG sh -c 'cat > files/profile.json'" <<'CARD'
+cat > /tmp/seed_profile.json <<'CARD'
 [{"category":"习惯","title":"英语听写需自带耳机","content":"听写前确认耳机，忘带会影响整节课节奏。","confidence":0.86,"evidence":["周三听写前确认耳机","周一提过忘带耳机","课代表职责提醒"]}]
 CARD
+adb push /tmp/seed_profile.json /data/local/tmp/seed_profile.json >/dev/null 2>&1 || true
+R "run-as $PKG sh -c 'cp /data/local/tmp/seed_profile.json files/profile.json'"
+echo "  seed-card: $(R "run-as $PKG sh -c 'wc -c < files/profile.json'" | tr -dc '0-9') bytes"
 sleep 1
 R "am force-stop $PKG"; sleep 1; R "am start -n $PKG/.ui.MainActivity > /dev/null"; sleep 3
 dump_dev /sdcard/t06pre.xml
