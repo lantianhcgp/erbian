@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".ErbianApp"
@@ -56,5 +58,16 @@
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_RECOGNITION"
             android:process=":assist" />
+
+        <!-- 浮层吊命：会话结束解绑后 :assist 被秒回收会带走悬浮窗（2026-10-15 实锤） -->
+        <service
+            android:name=".voice.AssistKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:process=":assist">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="voice assistant wake overlay panel" />
+        </service>
     </application>
 </manifest>

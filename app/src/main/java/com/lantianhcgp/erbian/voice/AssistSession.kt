@@ -77,14 +77,18 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
         val holder = arrayOfNulls<SessionPanelView>(1)
         val panel = SessionPanelView(ctx, onDismiss = {
             runCatching { holder[0]?.let { v -> wm.removeView(v) } }
+            runCatching { ctx.stopService(android.content.Intent(ctx, AssistKeepAliveService::class.java)) }
             hide()
         })
         holder[0] = panel
+        // 前台服务吊命：否则会话结束解绑后 :assist 秒回收，悬浮窗陪葬（v2.2 实锤）
+        runCatching { ctx.startForegroundService(android.content.Intent(ctx, AssistKeepAliveService::class.java)) }
         runCatching {
             wm.addView(panel, params)
-            com.lantianhcgp.erbian.Locator.logger.i("session", "overlay panel added (over current app)")
+            com.lantianhcgp.erbian.Locator.logger.i("session", "overlay panel added (over current app) + keepalive")
         }.onFailure {
             com.lantianhcgp.erbian.Locator.logger.e("session", "overlay add failed: $it")
+            runCatching { ctx.stopService(android.content.Intent(ctx, AssistKeepAliveService::class.java)) }
             finish()
         }
     }
