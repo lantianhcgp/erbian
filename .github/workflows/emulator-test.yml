@@ -75,8 +75,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          profile: pixel_2
-          emulator-options: -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          emulator-options: -no-snapshot -no-window -noaudio -no-boot-anim -camera-back none
           script: bash scripts/acceptance.sh
 
       - name: Upload screenshots & logs
