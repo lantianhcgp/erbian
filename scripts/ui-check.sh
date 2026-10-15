@@ -119,6 +119,8 @@ for item in "1:耳边待办" "2:刷新" "3:唤醒状态"; do
   sleep 2
   DUMP=$(dump)
   printf '%s' "$DUMP" > "$EV/nav$idx.xml"
+  # 每页视觉证据（交付前 agent 必须逐页亲验）
+  timeout 20 "$ADB" exec-out screencap -p > "$EV/page$idx.png" 2>/dev/null || true
   echo "-- nav $idx --" >> "$D"
   if has "$DUMP" "$marker"; then echo "OK: $marker" >> "$D"; else
     echo "MISS: $marker" >> "$D"; FAIL=1
