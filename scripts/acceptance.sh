@@ -25,6 +25,7 @@ echo "== [1b] start local webhook stub (captures uplink POST with signature) =="
 : > "$EV/verdict.txt"
 python3 scripts/webhook_stub.py "$EV/uplink_received.txt" > /dev/null 2>&1 &
 echo "stub pid $!"
+$ADB reverse tcp:8644 tcp:8644 || true   # 模拟器内 127.0.0.1:8644 -> 宿主桩
 
 echo "== [2] launch app + baseline screenshot =="
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null

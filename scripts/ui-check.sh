@@ -24,27 +24,17 @@ dump() {
 
 has() { case "$1" in *"$2"*) return 0;; *) return 1;; esac; }
 
-# 找 contentDescription=index 的节点中心坐标
-bounds_of_desc() { # $1=dump $2=desc -> "cx cy"
-  python3 - "$2" <<'PYEOF'
+# 找 content-desc=index 的节点中心坐标（$1=desc）
+bounds_of_desc() {
+  python3 - "$1" <<'PYEOF'
 import re, sys, html
 desc = sys.argv[1]
-try:
-    xml = open('/tmp/ui_live.xml', encoding='utf-8', errors='ignore').read()
-except Exception:
-    xml = ''
-m = None
+xml = open('/tmp/ui_live.xml', encoding='utf-8', errors='ignore').read()
 for mm in re.finditer(r'content-desc="([^"]*)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
     if html.unescape(mm.group(1)) == desc:
-        m = mm
-        break  # 首匹配即停（曾因取最后匹配点到键盘上的同名节点）
-if not m:
-    for mm in re.finditer(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*content-desc="([^"]*)"', xml):
-    # second pattern unlikely; keep simple
-        pass
-if m:
-    x1,y1,x2,y2 = map(int, m.groups()[1:5])
-    print((x1+x2)//2, (y1+y2)//2)
+        x1, y1, x2, y2 = map(int, mm.groups()[1:5])
+        print((x1 + x2) // 2, (y1 + y2) // 2)
+        break
 PYEOF
 }
 
