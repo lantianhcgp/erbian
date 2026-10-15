@@ -46,8 +46,12 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
     // 战史：会话窗口（onCreateContentView）系统只画入场动画不画内容——特权留给系统助理；
     // activity 跳转被否。最终方案：会话回调当扳机，面板走自家悬浮窗（TYPE_APPLICATION_OVERLAY）。
     override fun onCreateContentView(): android.view.View? {
-        // 无悬浮窗权限时的兜底（模拟器等场景可用）
-        com.lantianhcgp.erbian.Locator.logger.i("session", "onCreateContentView (fallback panel)")
+        // 两路互斥防叠面板（v2.4 实锤：生命周期修复后两路同时渲染=上下两个面板）
+        if (android.provider.Settings.canDrawOverlays(ctx)) {
+            com.lantianhcgp.erbian.Locator.logger.i("session", "content view skipped (overlay route active)")
+            return null
+        }
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onCreateContentView (no-overlay fallback panel)")
         return SessionPanelView(ctx, onDismiss = { hide() })
     }
 
