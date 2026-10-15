@@ -55,6 +55,9 @@ jobs:
       - name: Build APK + instrumented tests
         run: gradle assembleDebug assembleDebugAndroidTest --parallel --build-cache --no-daemon
 
+      - name: Install emulator display deps
+        run: sudo apt-get update && sudo apt-get install -y libpulse0
+
       - name: Run acceptance on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -62,7 +65,8 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
+          profile: pixel_2
+          emulator-options: -no-snapshot -noaudio -no-boot-anim -camera-back none -gpu swiftshader_indirect
           script: bash scripts/acceptance.sh
 
       - name: Upload screenshots & logs

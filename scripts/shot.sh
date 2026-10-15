@@ -20,11 +20,11 @@ try:
     raw = zlib.decompress(idat)
     bpp = 4 if (d[25]&4) else 3
     stride = w*bpp+1
-    rs = sum(raw[i*stride+1:(i+1)*stride] for i in range(min(60,h)), bytes())
-    if not rs: print('EMPTY'); raise SystemExit
+    joined = b''.join(raw[i*stride+1:(i+1)*stride] for i in range(min(60,h)))
+    if not joined: print('EMPTY'); raise SystemExit
     # 均值（RGB）
-    n=len(rs)
-    print(f'{sum(rs)/n:.0f}')
+    n=len(joined)
+    print(f'{sum(joined)/n:.0f}')
 except Exception:
     print('ERR')
 PYEOF
