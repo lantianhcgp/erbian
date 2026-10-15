@@ -133,7 +133,7 @@ sleep 2
 if [ "$FAIL" = 0 ]; then echo "UI_CHECK_PASS" | tee -a "$EV/verdict.txt"; else echo "UI_CHECK_FAIL" | tee -a "$EV/verdict.txt"; fi
 # 上行报文取证（发送后 uplink 约2s内打出）
 sleep 6
-if grep -q "user_record" "$EV/uplink_received.txt" 2>/dev/null; then
+if grep -q "webhooks/erbian-record" "$EV/uplink_received.txt" 2>/dev/null; then
   echo "UPLINK_PASS" | tee -a "$EV/verdict.txt"
 else
   echo "UPLINK_FAIL" | tee -a "$EV/verdict.txt"

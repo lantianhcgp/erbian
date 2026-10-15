@@ -89,7 +89,9 @@ echo "== [5] ASSIST intent = gating wake-chain check (dual-route: activity route
 bash scripts/wake-screen.sh
 timeout 15 $ADB logcat -c || true
 timeout 20 $ADB shell am start -a android.intent.action.ASSIST -n $PKG/.ui.MainActivity > "$EV/assist_start_out.txt" 2>&1 || true
-sleep 3
+sleep 4
+bash scripts/wake-screen.sh   # 软件渲染下偶发熄屏，捕获前再唤醒一次
+sleep 1
 timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
 sleep 1
 timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
