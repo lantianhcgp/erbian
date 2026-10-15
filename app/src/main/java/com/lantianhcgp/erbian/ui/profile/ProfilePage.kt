@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import json.JsonValue
 
 private data class ProfileCard(val category: String, val title: String, val content: String, val confidence: Float, val evidence: List<String>)
 
+@androidx.compose.foundation.ExperimentalFoundationApi
 @Composable
 fun ProfilePage(vm: AppViewModel) {
     val raw = vm.profileJson

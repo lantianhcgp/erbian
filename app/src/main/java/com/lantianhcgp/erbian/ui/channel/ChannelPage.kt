@@ -248,6 +248,7 @@ private fun SendCircle(enabled: Boolean, sending: Boolean, onClick: () -> Unit) 
 
 /** 气泡：方向尾 + 发送状态行 */
 @Composable
+@androidx.compose.foundation.ExperimentalFoundationApi
 private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit) {
     val isUser = m.origin in setOf("float", "channel")
     var menuOpen by remember { mutableStateOf(false) }
