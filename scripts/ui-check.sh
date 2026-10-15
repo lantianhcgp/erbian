@@ -133,6 +133,15 @@ done
 tap_page "0" || true
 sleep 2
 
+# 布局像素门禁：dock 药丸尺寸越界即红（1712px 全屏巨物曾逃过目检 —— 2026-10-16）
+LAYOUT_OK=1
+for f in "$EV"/page*.png; do
+  [ -f "$f" ] || continue
+  r=$(python3 scripts/layout_probe.py "$f" 2>&1) || LAYOUT_OK=0
+  echo "layout_probe $(basename "$f"): $r" | tee -a "$EV/layout_probe.txt"
+done
+if [ "$LAYOUT_OK" = 1 ]; then echo "LAYOUT_GATE_PASS" | tee -a "$EV/verdict.txt"; else echo "LAYOUT_GATE_FAIL" | tee -a "$EV/verdict.txt"; fi
+
 if [ "$FAIL" = 0 ]; then echo "UI_CHECK_PASS" | tee -a "$EV/verdict.txt"; else echo "UI_CHECK_FAIL" | tee -a "$EV/verdict.txt"; fi
 # 上行报文取证（发送后 uplink 约2s内打出）
 sleep 6

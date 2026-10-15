@@ -143,7 +143,7 @@ fun ErbianDock(page: Int, onSelected: (Int) -> Unit) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .fillMaxHeight()
+                // 禁用 fillMaxHeight：在 heightIn(min) 盒子里它会把药丸撑到全屏高（2026-10-16 真机截图实锤）
                 .padding(horizontal = Dock.EdgeDp.dp / 2),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
