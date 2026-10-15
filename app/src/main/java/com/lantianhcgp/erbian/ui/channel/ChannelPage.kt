@@ -29,6 +29,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Route
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -68,7 +76,7 @@ import model.MsgStatus
  * - 气泡方向尾、hairline 描边语言、发送按钮状态机
  */
 @Composable
-fun ChannelPage(vm: AppViewModel) {
+fun ChannelPage(vm: AppViewModel, onNavigate: (Int) -> Unit = {}) {
     val messages by vm.channel.collectAsState()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -79,11 +87,11 @@ fun ChannelPage(vm: AppViewModel) {
 
     // 键盘开合决定底垫：关=盖过 dock（含手势条）；开=交给 imePadding（dock 此时被键盘盖住无需避让）
     val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-    val bottomPad = if (imeOpen) 8.dp else dockBottomInset()
+    val bottomPad = if (imeOpen) 8.dp else 10.dp  // 频道页 dock 收起（设计§七），只避手势条
 
     androidx.compose.material3.Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
-        topBar = { ChannelHeader(vm) },
+        topBar = { ChannelHeader(vm, onNavigate) },
         bottomBar = {
             Column(
                 Modifier
@@ -129,7 +137,7 @@ fun ChannelPage(vm: AppViewModel) {
 }
 
 @Composable
-private fun ChannelHeader(vm: AppViewModel) {
+private fun ChannelHeader(vm: AppViewModel, onNavigate: (Int) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -143,7 +151,13 @@ private fun ChannelHeader(vm: AppViewModel) {
             "频道",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // 页头导航（频道页无 dock，导航在页内切换；desc "0"-"3" 测试契约保留）
+            HeaderNavItem(0, onNavigate, Icons.Outlined.Route, "频道")
+            HeaderNavItem(1, onNavigate, Icons.Outlined.CalendarMonth, "日程")
+            HeaderNavItem(2, onNavigate, Icons.Outlined.Person, "画像")
+            HeaderNavItem(3, onNavigate, Icons.Outlined.Settings, "设置")
+            Spacer(Modifier.width(4.dp))
             StatusDot(ok = vm.shizukuPermission, label = "Shizuku")
             StatusDot(ok = vm.queueInFlight == 0, label = "通道")
         }
@@ -294,5 +308,26 @@ private fun TodoConfirmCard(m: Message, vm: AppViewModel) {
             PillButton("确认", onClick = { vm.send("确认：${m.body}") })
             PillButton("不用", onClick = { vm.send("不用了：${m.body}") }, filled = false)
         }
+    }
+}
+
+
+/** 页头迷你导航（频道页专用；desc=index 测试契约；选中 primary 圆底） */
+@Composable
+private fun HeaderNavItem(index: Int, onNavigate: (Int) -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
+    val tint by androidx.compose.animation.animateColorAsState(
+        if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        label = "navTint$index",
+    )
+    Box(
+        Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(50))
+            .background(if (index == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
+            .clickable { onNavigate(index) }
+            .semantics { contentDescription = index.toString() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(17.dp))
     }
 }

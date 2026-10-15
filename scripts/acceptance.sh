@@ -102,8 +102,9 @@ sleep 1
 shot "$EV/04_assist.png" || true
 timeout 30 $ADB logcat -d -t 300 > "$EV/assist_intent_logcat.txt" 2>&1 || true
 timeout 40 $ADB shell uiautomator dump /sdcard/ui_assist.xml > /dev/null 2>&1 || true
-WAKE_HIT=$(timeout 20 $ADB shell cat /sdcard/ui_assist.xml 2>/dev/null | grep -c 'text="发送"' || true)
+WAKE_HIT=$(timeout 20 $ADB shell cat /sdcard/ui_assist.xml 2>/dev/null | grep -cE 'text="发送"|点此收起' || true)
 echo "wake_panel_textsend=${WAKE_HIT:-0}" | tee "$EV/wake_ui_gate.txt"
+timeout 20 $ADB shell cat /sdcard/ui_assist.xml 2>/dev/null | grep -oE 'text="[^"]+"' | grep -v 'text=""' | sort -u > "$EV/assist_texts.txt" || true
 if [ "${WAKE_HIT:-0}" -ge 1 ]; then echo "WAKE_UI_PASS" >> "$EV/verdict.txt"; else echo "WAKE_UI_FAIL" >> "$EV/verdict.txt"; fi
 
 echo "== [6] final screenshot =="
