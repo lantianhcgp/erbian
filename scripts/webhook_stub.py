@@ -4,6 +4,8 @@
 import http.server, json, time, sys
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "build/acceptance/uplink_received.txt"
+with open(OUT, "a", encoding="utf-8") as _f:
+    _f.write(json.dumps({"t": time.strftime("%H:%M:%S"), "path": "STUB_STARTED"}) + "\n")
 
 class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):

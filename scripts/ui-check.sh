@@ -87,10 +87,10 @@ for m in "频道" "说点什么"; do
   if has "$DUMP" "$m"; then echo "OK: $m" >> "$D"; else echo "MISS: $m" >> "$D"; FAIL=1; fi
 done
 
-# 2 发送出泡（点输入框 y 用 input 节点、ENTER 发送）
+# 2 发送出泡：点输入框 → 输入 → 重新dump取「发送」键坐标 → 点击 → 验证清空+出泡
 printf '%s' "$DUMP" > /tmp/ui_live.xml
 INP=$(python3 - <<'PYEOF'
-import re, html
+import re
 xml=open('/tmp/ui_live.xml',encoding='utf-8',errors='ignore').read()
 for mm in re.finditer(r'text="说点什么"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
     x1,y1,x2,y2=map(int,mm.groups()); print((x1+x2)//2,(y1+y2)//2); break
@@ -101,12 +101,26 @@ if [ -n "$INP" ]; then
   sleep 1
   timeout 15 $ADB shell input text "ceshi_jilu"
   sleep 1
-  timeout 15 $ADB shell input keyevent 66
-  sleep 2
+  # 键盘态重新取发送键坐标（ENTER 不是发送——曾是多轮假绿根源）
+  DUMP=$(dump)
+  printf '%s' "$DUMP" > /tmp/ui_live.xml
+  SEND=$(python3 - <<'PYEOF'
+import re
+xml=open('/tmp/ui_live.xml',encoding='utf-8',errors='ignore').read()
+for mm in re.finditer(r'content-desc="发送"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml):
+    x1,y1,x2,y2=map(int,mm.groups()); print((x1+x2)//2,(y1+y2)//2); break
+PYEOF
+)
+  echo "  send btn at $SEND" >> "$D"
+  if [ -n "$SEND" ]; then timeout 15 $ADB shell input tap $SEND; fi
+  sleep 3
+  timeout 15 $ADB shell input keyevent 4   # 收键盘（主页面 BACK 先关 IME）
+  sleep 1
 fi
 DUMP=$(dump)
 echo "-- after send --" >> "$D"
-if has "$DUMP" "ceshi_jilu"; then echo "OK: send bubble" >> "$D"; else echo "MISS: send bubble" >> "$D"; FAIL=1; fi
+# 判定：输入框已清空(重新显示占位) 且 页面上存在刚输入的文本 = 真发送成功
+if has "$DUMP" "说点什么" && has "$DUMP" "ceshi_jilu"; then echo "OK: send bubble" >> "$D"; else echo "MISS: send bubble" >> "$D"; FAIL=1; fi
 
 # 3 导航三页
 for item in "1:耳边待办" "2:刷新" "3:唤醒状态"; do
@@ -126,7 +140,7 @@ done
 tap_page "0" || true
 sleep 2
 
-if [ "$FAIL" = 0 ]; then echo "UI_CHECK_PASS" | tee "$EV/verdict.txt"; else echo "UI_CHECK_FAIL" | tee "$EV/verdict.txt"; fi
+if [ "$FAIL" = 0 ]; then echo "UI_CHECK_PASS" | tee -a "$EV/verdict.txt"; else echo "UI_CHECK_FAIL" | tee -a "$EV/verdict.txt"; fi
 # 上行报文取证（发送后 uplink 约2s内打出）
 sleep 6
 if grep -q "user_record" "$EV/uplink_received.txt" 2>/dev/null; then
