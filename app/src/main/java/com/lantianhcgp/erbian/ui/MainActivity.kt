@@ -151,17 +151,15 @@ fun HomeScreen(vm: AppViewModel) {
                 modifier = Modifier.fillMaxSize(),
             ) { p ->
                 when (p) {
-                    0 -> ChannelPage(vm, onNavigate = { page = it })
+                    0 -> ChannelPage(vm)
                     1 -> SchedulePage(vm)
                     2 -> ProfilePage(vm)
                     else -> SettingsPage(vm)
                 }
             }
-            // 浮动 dock（spec §2）——设计 §七：频道页收起为贴底输入栏（避免双底栏），导航在页头切换
-            if (page != 0) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                    ErbianDock(page = page, onSelected = { page = it })
-                }
+            // 浮动 dock：统一贴底（用户定案 2026-10-15：所有页面导航都在下面，页头导航否决）
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                ErbianDock(page = page, onSelected = { page = it })
             }
         }
     }

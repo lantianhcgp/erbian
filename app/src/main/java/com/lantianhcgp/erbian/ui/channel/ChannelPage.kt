@@ -79,7 +79,7 @@ import model.MsgStatus
  * - 气泡方向尾、hairline 描边语言、发送按钮状态机
  */
 @Composable
-fun ChannelPage(vm: AppViewModel, onNavigate: (Int) -> Unit = {}) {
+fun ChannelPage(vm: AppViewModel) {
     val messages by vm.channel.collectAsState()
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -90,11 +90,11 @@ fun ChannelPage(vm: AppViewModel, onNavigate: (Int) -> Unit = {}) {
 
     // 键盘开合决定底垫：关=盖过 dock（含手势条）；开=交给 imePadding（dock 此时被键盘盖住无需避让）
     val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-    val bottomPad = if (imeOpen) 8.dp else 10.dp  // 频道页 dock 收起（设计§七），只避手势条
+    val bottomPad = if (imeOpen) 8.dp else dockBottomInset() + 8.dp  // 输入栏浮在 dock 之上留缝
 
     androidx.compose.material3.Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
-        topBar = { ChannelHeader(vm, onNavigate) },
+        topBar = { ChannelHeader(vm) },
         bottomBar = {
             Column(
                 Modifier
@@ -140,7 +140,7 @@ fun ChannelPage(vm: AppViewModel, onNavigate: (Int) -> Unit = {}) {
 }
 
 @Composable
-private fun ChannelHeader(vm: AppViewModel, onNavigate: (Int) -> Unit) {
+private fun ChannelHeader(vm: AppViewModel) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -154,19 +154,16 @@ private fun ChannelHeader(vm: AppViewModel, onNavigate: (Int) -> Unit) {
             "频道",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            // 页头导航（频道页无 dock，导航在页内切换；desc "0"-"3" 测试契约保留）
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // 摘要按钮（设计§六）
             androidx.compose.material3.IconButton(
                 onClick = { vm.send("给我一份摘要：上次摘要之后的所有回复") },
-                modifier = Modifier.semantics { contentDescription = "摘要" },
+                modifier = Modifier
+                    .size(30.dp)
+                    .semantics { contentDescription = "摘要" },
             ) {
-                Icon(Icons.Outlined.Assessment, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
+                Icon(Icons.Outlined.Assessment, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
-            HeaderNavItem(0, onNavigate, Icons.Outlined.Route, "频道")
-            HeaderNavItem(1, onNavigate, Icons.Outlined.CalendarMonth, "日程")
-            HeaderNavItem(2, onNavigate, Icons.Outlined.Person, "画像")
-            HeaderNavItem(3, onNavigate, Icons.Outlined.Settings, "设置")
-            Spacer(Modifier.width(4.dp))
             StatusDot(ok = vm.shizukuPermission, label = "Shizuku")
             StatusDot(ok = vm.queueInFlight == 0, label = "通道")
         }
@@ -347,22 +344,3 @@ private fun TodoConfirmCard(m: Message, vm: AppViewModel) {
 }
 
 
-/** 页头迷你导航（频道页专用；desc=index 测试契约；选中 primary 圆底） */
-@Composable
-private fun HeaderNavItem(index: Int, onNavigate: (Int) -> Unit, icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
-    val tint by androidx.compose.animation.animateColorAsState(
-        if (index == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-        label = "navTint$index",
-    )
-    Box(
-        Modifier
-            .size(32.dp)
-            .clip(RoundedCornerShape(50))
-            .background(if (index == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-            .clickable { onNavigate(index) }
-            .semantics { contentDescription = index.toString() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(17.dp))
-    }
-}

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -133,7 +134,7 @@ fun ErbianDock(page: Int, onSelected: (Int) -> Unit) {
         Modifier
             .fillMaxWidth()
             .padding(start = Dock.EdgeDp.dp, end = Dock.EdgeDp.dp, bottom = bottom)
-            .height(Dock.HeightDp.dp)
+            .heightIn(min = Dock.HeightDp.dp)  // 抗裁：内容撑开而非切（大字体/高密度安全）
             .shadow(elevation = 8.dp, shape = shape, clip = false)
             .clip(shape)
             .background(container)
