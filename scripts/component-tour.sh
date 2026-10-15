@@ -83,22 +83,22 @@ dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败�
   return 0
 }
 
-launch() { # 确保 App 真在前台（force-stop 后锁屏会让 start 躲在钥匙屏后——巡检 dump 出桌面树的病根）
-  R "input keyevent KEYCODE_WAKEUP"
+launch() { # 确保 App 真在前台。start/force-stop 用与 ui-check 逐字节相同的多参数直呼
+  # （R 的 echo/stdin/引号三种形态都踩过 adb 的坑: 拆参/本地管道/转义引号→Error type 3）
+  timeout 20 adb shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
   sleep 1
-  R "wm dismiss-keyguard"
-  R "am force-stop $PKG"
+  timeout 20 adb shell wm dismiss-keyguard 2>/dev/null || true
+  timeout 20 adb shell am force-stop $PKG 2>/dev/null || true
   sleep 1
-  local i pkg
+  local i pkg out
   for i in 1 2 3 4 5 6; do
-    ao=$(R "am start -n $PKG/.ui.MainActivity -W" 2>&1 | tr -d '\r' | grep -E 'Status|Error|Complete|Warning' | head -3)
+    out=$(timeout 30 adb shell am start -n $PKG/.ui.MainActivity 2>&1 | tr -d '\r' | grep -E 'Status|Error|Warning|Starting' | head -2)
     sleep 3
-    raw=$(R "dumpsys window | grep mCurrentFocus" | tr -d '\r' | head -2)
-    pkg=$(echo "$raw" | grep -o 'com\.[a-zA-Z.]*' | head -1)
-    echo "  launch try$i focus=$pkg | amW=$ao | raw=$raw"
+    pkg=$(timeout 20 adb shell dumpsys window | tr -d '\r' | grep -m1 mCurrentFocus | grep -o 'com\.[a-zA-Z.]*' | head -1)
+    echo "  launch try$i focus=$pkg | am=$out"
     case "$pkg" in *lantianhcgp.erbian*) return 0 ;; esac
-    R "input keyevent KEYCODE_WAKEUP"
-    R "wm dismiss-keyguard"
+    timeout 20 adb shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
+    timeout 20 adb shell wm dismiss-keyguard 2>/dev/null || true
     sleep 2
   done
   echo "  launch WARN: app not foreground after retries"
