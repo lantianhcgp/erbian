@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:sessionService="com.lantianhcgp.erbian.voice.AssistSessionService"
+    android:recognitionService="com.lantianhcgp.erbian.voice.AssistRecognitionService"
     android:settingsActivity="com.lantianhcgp.erbian.ui.MainActivity" />

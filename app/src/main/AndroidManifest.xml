@@ -49,5 +49,11 @@
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION"
             android:process=":assist" />
+
+        <service
+            android:name=".voice.AssistRecognitionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_RECOGNITION"
+            android:process=":assist" />
     </application>
 </manifest>
