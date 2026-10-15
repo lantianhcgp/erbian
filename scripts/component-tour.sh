@@ -14,9 +14,9 @@ R() {
   if [ -x "$HOME/rish/rish_t" ]; then
     echo "$1" | timeout 40 "$HOME/rish/rish_t" 2>/dev/null || true
   else
-    # 坑链: sh -c 包裹会被 adb 拆参；不加引号则管道在本地执行(cat 设备文件当然空)。
-    # 正解: adb shell "$1" 整行交设备端 shell 解释（管道/重定向都在设备生效）。
-    timeout 40 adb shell "$1" 2>/dev/null || true
+    # 坑链终局: sh -c 包裹被拆参；不加引号管道在本地跑；加引号(参数模式)adb 转义引号致
+    # "Error type 3"(组件名带引号)。正解=stdin 模式，与 ui-check 一直全中的 run() 同款：
+    echo "$1" | timeout 40 adb shell 2>/dev/null || true
   fi
 }
 
