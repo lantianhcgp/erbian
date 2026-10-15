@@ -55,16 +55,21 @@ jobs:
       - name: Build APK + instrumented tests
         run: gradle assembleDebug assembleDebugAndroidTest --parallel --build-cache --no-daemon
 
-      - name: Install emulator display deps
+      - name: Install emulator display deps + start Xvfb
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpulse0 \
+          sudo apt-get install -y libpulse0 xvfb \
             libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 libxkbcommon-x11-0 \
             libgl1 libopengl0 libglu1-mesa libxcb-cursor0
+          Xvfb :0 -screen 0 1280x2400x24 &
+          sleep 2
+          xdpyinfo -display :0 | head -2 || true
 
       - name: Run acceptance on emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          DISPLAY: ':0'
         with:
           api-level: 34
           arch: x86_64
