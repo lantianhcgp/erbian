@@ -5,10 +5,12 @@ import android.service.voice.VoiceInteractionSession
 import com.lantianhcgp.erbian.ui.MainActivity
 import android.view.ViewGroup
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -70,7 +72,7 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
         val wm = ctx.getSystemService(android.view.WindowManager::class.java)
         val params = android.view.WindowManager.LayoutParams(
             android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
             android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             0,
             android.graphics.PixelFormat.TRANSLUCENT,
@@ -131,11 +133,18 @@ fun SessionPanel(onDismiss: () -> Unit) {
     MaterialTheme {
         Box(
             Modifier
-                .fillMaxWidth()
-                .background(Color.Transparent)
-                .navigationBarsPadding(),
-            contentAlignment = Alignment.BottomCenter,
+                .fillMaxSize()
+                // 点上方空白区退出（用户需求 2026-10-15）；面板区域是 sibling，点击落不到这层
+                .background(Color.Black.copy(alpha = 0.35f))
+                .clickable { onDismiss() },
         ) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding(),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
             Surface(
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 tonalElevation = 3.dp,
@@ -193,6 +202,7 @@ fun SessionPanel(onDismiss: () -> Unit) {
                     }
                 }
             }
-        }
-    }
+            }  // inner Box
+        }  // outer Box
+    }  // MaterialTheme
 }
