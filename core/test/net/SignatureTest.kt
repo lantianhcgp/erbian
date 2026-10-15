@@ -16,7 +16,19 @@ class SignatureTest {
 
     @Test
     fun headerNameStable() {
-        assertEquals("X-Erbian-Signature", Signature.HEADER)
+        // Hermes webhook 平台通用 V2 验签头（契约，勿改回自造头）
+        assertEquals("X-Webhook-Signature-V2", Signature.HEADER)
+    }
+
+    @Test
+    fun v2SigningContent() {
+        // V2 签名内容 = "<秒级时间戳>.<body>" —— 与 gateway/platforms/webhook.py 对齐
+        val ts = "1792000000"
+        val body = "{\"id\":\"x\"}"
+        val sig = Signature.hmacSha256Hex("s3cr3t", "$ts.$body")
+        assertEquals(64, sig.length)
+        // 双重签名不同内容必不同
+        assertTrue(sig != Signature.hmacSha256Hex("s3cr3t", body))
     }
 
     @Test
