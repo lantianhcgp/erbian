@@ -4,6 +4,7 @@
 EV=build/acceptance
 mkdir -p "$EV"
 ADB="adb"
+. "$(cd "$(dirname "$0")" && pwd)/shot.sh"
 PKG=com.lantianhcgp.erbian
 D=$EV/ui_check_detail.txt
 : > "$D"
@@ -119,12 +120,8 @@ for item in "1:耳边待办" "2:刷新" "3:唤醒状态"; do
   sleep 2
   DUMP=$(dump)
   printf '%s' "$DUMP" > "$EV/nav$idx.xml"
-  # 每页视觉证据（交付前 agent 必须逐页亲验）——先唤醒防黑帧
-  bash "$(dirname "$0")/wake-screen.sh" >/dev/null 2>&1 || true
-  sleep 1
-  timeout 20 "$ADB" exec-out screencap -p > "$EV/page$idx.png" 2>/dev/null || true
-  sleep 1
-  timeout 20 "$ADB" exec-out screencap -p > "$EV/page$idx.png" 2>/dev/null || true
+  # 每页视觉证据（文件式截图+亮度断言+自动重拍，见 shot.sh）
+  shot "$EV/page$idx.png" || true
   echo "-- nav $idx --" >> "$D"
   if has "$DUMP" "$marker"; then echo "OK: $marker" >> "$D"; else
     echo "MISS: $marker" >> "$D"; FAIL=1

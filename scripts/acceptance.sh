@@ -4,6 +4,7 @@
 set -e
 cd "$(dirname "$0")/.."
 EV=build/acceptance
+. "$(cd "$(dirname "$0")" && pwd)/shot.sh"
 mkdir -p "$EV"
 ADB="adb"
 
@@ -30,7 +31,7 @@ $ADB reverse tcp:8644 tcp:8644 || true   # 模拟器内 127.0.0.1:8644 -> 宿主
 echo "== [2] launch app + baseline screenshot =="
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null
 sleep 4
-timeout 20 $ADB exec-out screencap -p > "$EV/01_home.png"
+shot "$EV/01_home.png" || true
 
 echo "== [3] configure wake chain (same 3 settings as production) =="
 $ADB shell settings put secure assistant "$COMP" | tee "$EV/wake_settings.txt"
@@ -57,9 +58,9 @@ timeout 20 $ADB shell input keyevent --longpress KEYCODE_POWER
 sleep 4
 $ADB shell "dumpsys window | grep -iE 'erbian|VoiceInter|Assist'" > "$EV/assist_window.txt" || true
 $ADB shell dumpsys activity services "$PKG" > "$EV/services_after_wake.txt" 2>&1 || true
-timeout 20 $ADB exec-out screencap -p > "$EV/02_wake.png"
+shot "$EV/02_wake.png" || true
 sleep 1
-timeout 20 $ADB exec-out screencap -p > "$EV/02_wake.png"   # 双帧取后者（软件渲染首帧常黑）
+shot "$EV/02_wake.png" || true   # 双帧取后者（软件渲染首帧常黑）
 timeout 30 $ADB logcat -d -t 500 > "$EV/wake_logcat.txt" || true
 grep -E "session|onNewSession|panel attached|powerLongPress" "$EV/wake_logcat.txt" > "$EV/session_evidence.txt" || true
 # UI 侧会话面板探测：长按后屏幕上是否出现「发送」按钮/输入框
@@ -92,9 +93,9 @@ timeout 20 $ADB shell am start -a android.intent.action.ASSIST -n $PKG/.ui.MainA
 sleep 4
 bash scripts/wake-screen.sh   # 软件渲染下偶发熄屏，捕获前再唤醒一次
 sleep 1
-timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
+shot "$EV/04_assist.png" || true
 sleep 1
-timeout 20 $ADB exec-out screencap -p > "$EV/04_assist.png"
+shot "$EV/04_assist.png" || true
 timeout 30 $ADB logcat -d -t 300 > "$EV/assist_intent_logcat.txt" 2>&1 || true
 timeout 40 $ADB shell uiautomator dump /sdcard/ui_assist.xml > /dev/null 2>&1 || true
 WAKE_HIT=$(timeout 20 $ADB shell cat /sdcard/ui_assist.xml 2>/dev/null | grep -c 'text="发送"' || true)
@@ -105,7 +106,7 @@ echo "== [6] final screenshot =="
 bash scripts/wake-screen.sh
 $ADB shell am start -n $PKG/.ui.MainActivity >/dev/null || true
 sleep 2
-timeout 20 $ADB exec-out screencap -p > "$EV/03_final.png"
+shot "$EV/03_final.png" || true
 
 echo "== [7] crash evidence =="
 $ADB logcat -d 2>/dev/null | grep -B3 -A40 "FATAL EXCEPTION" | head -120 > "$EV/crash_evidence.txt" || true
