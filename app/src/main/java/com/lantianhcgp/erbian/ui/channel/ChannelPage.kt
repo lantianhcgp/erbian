@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
