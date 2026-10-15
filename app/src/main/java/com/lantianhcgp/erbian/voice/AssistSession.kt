@@ -74,12 +74,12 @@ class AssistSession(private val ctx: android.content.Context) : VoiceInteraction
             gravity = android.view.Gravity.BOTTOM
             softInputMode = android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
-        var panel: SessionPanelView? = null
-        panel = SessionPanelView(ctx, onDismiss = {
-            runCatching { wm.removeView(panel) }
+        val holder = arrayOfNulls<SessionPanelView>(1)
+        val panel = SessionPanelView(ctx, onDismiss = {
+            runCatching { holder[0]?.let { v -> wm.removeView(v) } }
             hide()
         })
-        runCatching {
+        holder[0] = panel        runCatching {
             wm.addView(panel, params)
             com.lantianhcgp.erbian.Locator.logger.i("session", "overlay panel added (over current app)")
         }.onFailure {
