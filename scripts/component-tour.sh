@@ -13,8 +13,9 @@ R() {
   if [ -x "$HOME/rish/rish_t" ]; then
     echo "$1" | timeout 40 "$HOME/rish/rish_t" 2>/dev/null || true
   else
-    # 坑: adb shell sh -c "$1" 会被 adb 拼接拆参(am 裸跑吐 help)——直接 adb shell <cmd>
-    timeout 40 adb shell $1 2>/dev/null || true
+    # 坑链: sh -c 包裹会被 adb 拆参；不加引号则管道在本地执行(cat 设备文件当然空)。
+    # 正解: adb shell "$1" 整行交设备端 shell 解释（管道/重定向都在设备生效）。
+    timeout 40 adb shell "$1" 2>/dev/null || true
   fi
 }
 
