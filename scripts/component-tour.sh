@@ -83,11 +83,25 @@ dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败�
   return 0
 }
 
-launch() {
+launch() { # 确保 App 真在前台（force-stop 后锁屏会让 start 躲在钥匙屏后——巡检 dump 出桌面树的病根）
+  R "input keyevent KEYCODE_WAKEUP"
+  sleep 1
+  R "wm dismiss-keyguard"
   R "am force-stop $PKG"
   sleep 1
-  R "am start -n $PKG/.ui.MainActivity > /dev/null"
-  sleep 4
+  local i pkg
+  for i in 1 2 3 4 5 6; do
+    R "am start -n $PKG/.ui.MainActivity > /dev/null"
+    sleep 3
+    pkg=$(R "dumpsys window | grep -m1 mCurrentFocus" | grep -o 'com\.[a-zA-Z.]*' | head -1)
+    echo "  launch try$i focus=$pkg"
+    case "$pkg" in *lantianhcgp.erbian*) return 0 ;; esac
+    R "input keyevent KEYCODE_WAKEUP"
+    R "wm dismiss-keyguard"
+    sleep 2
+  done
+  echo "  launch WARN: app not foreground after retries"
+  return 1
 }
 
 echo "== tour: T01 channel base =="
