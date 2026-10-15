@@ -20,19 +20,32 @@ R() {
 }
 
 bounds_desc() { # $1=dump-file-on-device $2=selector like: desc=1 / text=说点什么
-  # 策略: pull 到本地再 grep（adb 传输内嵌引号命令链屡出怪相，本地路径已实证可靠）
-  local sel="$2" pat
-  case "$sel" in
-    desc=*) pat="content-desc=\"${sel#desc=}\"" ;;
-    text=*) pat="text=\"${sel#text=}\"" ;;
-    *) pat="$sel" ;;
-  esac
+  # 配方照抄 ui-check 一直全中的路径: python 正则 + 本地文件（grep 路线在 1.19MB 单行 XML 上屡屡空手，弃）
+  local sel="$2"
   if [ -x "$HOME/rish/rish_t" ]; then
-    R "cat $1" | grep -o "$pat[^/]*bounds=\"\[[0-9,]*\]\[[0-9,]*\]\"" | head -1 | grep -o '\[[0-9,]*\]\[[0-9,]*\]' | tail -1
+    R "cat $1" > "$BD_TMP" 2>/dev/null || true
   else
     adb pull "$1" "$BD_TMP" >/dev/null 2>&1 || true
-    grep -o "$pat[^/]*bounds=\"\[[0-9,]*\]\[[0-9,]*\]\"" "$BD_TMP" 2>/dev/null | head -1 | grep -o '\[[0-9,]*\]\[[0-9,]*\]' | tail -1 || true
   fi
+  echo "    bd dbg $(wc -c < "$BD_TMP" 2>/dev/null)B file for $1" >&2
+  python3 - "$sel" "$BD_TMP" <<'PYEOF'
+import re, sys, html
+sel, path = sys.argv[1], sys.argv[2]
+key, _, val = sel.partition('=')
+attr = {'desc': 'content-desc', 'text': 'text'}.get(key)
+if not attr:
+    sys.exit(0)
+try:
+    xml = open(path, encoding='utf-8', errors='ignore').read()
+except OSError:
+    sys.exit(0)
+pat = re.escape(attr) + r'="([^"]*)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"'
+for mm in re.finditer(pat, xml):
+    if html.unescape(mm.group(1)) == val:
+        x1, y1, x2, y2 = map(int, mm.groups()[1:])
+        print((x1 + x2) // 2, (y1 + y2) // 2)
+        break
+PYEOF
 }
 
 tap_sel() { # $1=dump $2=selector
