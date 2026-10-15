@@ -29,6 +29,8 @@ bounds_desc() { # $1=dump-file-on-device $2=selector like: desc=1 / text=说点�
     adb pull "$1" "$BD_TMP" >/dev/null 2>&1 || true
   fi
   echo "    bd dbg $(wc -c < "$BD_TMP" 2>/dev/null)B file for $1" >&2
+  # 证据随包：把设备 dump 也拉进 artifact（agent 本地亲验用）
+  cp "$BD_TMP" "$EV/$(basename $1)" 2>/dev/null || true
   python3 - "$sel" "$BD_TMP" <<'PYEOF'
 import re, sys, html
 sel, path = sys.argv[1], sys.argv[2]

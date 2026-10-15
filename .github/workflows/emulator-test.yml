@@ -88,4 +88,5 @@ jobs:
             build/acceptance/*.png
             build/acceptance/*.txt
             build/acceptance/*.check
+            build/acceptance/*.xml
           if-no-files-found: warn
