@@ -131,7 +131,6 @@ fun ErbianDock(page: Int, onSelected: (Int) -> Unit) {
 
     Box(
         Modifier
-            .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .padding(start = Dock.EdgeDp.dp, end = Dock.EdgeDp.dp, bottom = bottom)
             .height(Dock.HeightDp.dp)

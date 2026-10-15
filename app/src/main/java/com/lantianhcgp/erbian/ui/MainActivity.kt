@@ -157,8 +157,10 @@ fun HomeScreen(vm: AppViewModel) {
                     else -> SettingsPage(vm)
                 }
             }
-            // 浮动 dock（spec §2：系统手势条边距/柔影/透镜选中）
-            ErbianDock(page = page, onSelected = { page = it })
+            // 浮动 dock（spec §2：系统手势条边距/柔影/透镜选中）——包一层底部对齐（align 需 BoxScope）
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                ErbianDock(page = page, onSelected = { page = it })
+            }
         }
     }
 }

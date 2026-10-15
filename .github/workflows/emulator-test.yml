@@ -73,4 +73,5 @@ jobs:
           path: |
             build/acceptance/*.png
             build/acceptance/*.txt
+            build/acceptance/*.check
           if-no-files-found: warn
