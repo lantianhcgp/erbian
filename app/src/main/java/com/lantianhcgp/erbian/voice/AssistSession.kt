@@ -98,6 +98,19 @@ class SessionPanelView(
     context: android.content.Context,
     private val onDismiss: () -> Unit,
 ) : AbstractComposeView(context) {
+
+    // 无主窗口（会话窗/悬浮窗）必须自带生命周期三件套，否则 Compose 首帧崩溃进程秒杀
+    private val viewTreeOwner = PanelViewTreeOwner()
+
+    init {
+        viewTreeOwner.attachTo(this)
+    }
+
+    override fun onDetachedFromWindow() {
+        viewTreeOwner.detach()
+        super.onDetachedFromWindow()
+    }
+
     @Composable
     override fun Content() {
         SessionPanel(onDismiss = onDismiss)
