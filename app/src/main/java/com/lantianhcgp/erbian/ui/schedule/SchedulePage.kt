@@ -7,12 +7,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,15 +23,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lantianhcgp.erbian.ui.AppViewModel
+import com.lantianhcgp.erbian.ui.dockBottomInset
 import com.lantianhcgp.erbian.ui.widgets.CardTitle
-import com.lantianhcgp.erbian.ui.widgets.EmptyState
 import com.lantianhcgp.erbian.ui.widgets.ErbianCard
 import com.lantianhcgp.erbian.ui.widgets.PillButton
+import model.Message
 import model.MsgKind
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,6 +42,33 @@ import java.util.Locale
 
 private data class CalEvent(val day: String, val title: String, val time: String)
 
+/** 页面统一页头（statusBars 避让 + 标题字重阶梯） */
+@Composable
+fun PageHeader(title: String, modifier: Modifier = Modifier) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 6.dp),
+    )
+}
+
+/**
+ * 日程页 v2（spec §4）：**单一 LazyColumn**（根治双懒列嵌套溢出）、
+ * 页头避让状态栏、内容垫过 dock；查询/权限逻辑不变（测试钩子文本不变）。
+ */
 @Composable
 fun SchedulePage(vm: AppViewModel) {
     val context = LocalContext.current
@@ -60,40 +91,62 @@ fun SchedulePage(vm: AppViewModel) {
         if (events.isEmpty() && calNote.isEmpty()) calNote = "日历里还没有「耳边待办」，跟我说点要做的事就会有"
     }
 
-    val confirms by vm.channel.collectAsState()
-    val pendings = confirms.filter {
-        it.kind == MsgKind.TODO_CONFIRM && it.body !in confirms.filter { c -> c.kind == MsgKind.TODO_RESULT }.map { r -> r.body.removePrefix("已加入日程：").removePrefix("确认：") }
+    val channel by vm.channel.collectAsState()
+    val pendings = channel.filter {
+        it.kind == MsgKind.TODO_CONFIRM && it.body !in channel.filter { c -> c.kind == MsgKind.TODO_RESULT }.map { r -> r.body.removePrefix("已加入日程：").removePrefix("确认：") }
     }.takeLast(10)
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
-        Text("日程", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp, bottom = 8.dp))
+    val grouped = remember(events) { events.groupBy { it.day } }
 
-        CardTitle("耳边待办")
-        if (events.isEmpty()) {
-            Text(calNote.ifEmpty { "日历里还没有「耳边待办」" }, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(vertical = 8.dp))
-        } else {
-            LazyColumn(Modifier.padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                val grouped = events.groupBy { it.day }
-                for ((day, list) in grouped) {
-                    item {
-                        Text(day, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp))
+    Column(Modifier.fillMaxSize()) {
+        PageHeader("日程")
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = dockBottomInset()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item { SectionLabel("耳边待办") }
+            if (events.isEmpty()) {
+                item {
+                    Text(
+                        calNote.ifEmpty { "日历里还没有「耳边待办」" },
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    )
+                }
+            } else {
+                grouped.forEach { (day, list) ->
+                    item(key = "day-$day") {
+                        Text(
+                            day,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
                     }
-                    items(list) { e ->
+                    items(list.size, key = { "$day-$it" }) { idx ->
+                        val e = list[idx]
                         ErbianCard {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(e.title, fontSize = 14.sp)
-                                Text(e.time, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(e.title, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                }
+                                Text(
+                                    e.time,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
                 }
             }
-        }
 
-        if (pendings.isNotEmpty()) {
-            Text("待确认", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(pendings, key = { it.id }) { m ->
+            if (pendings.isNotEmpty()) {
+                item { SectionLabel("待确认") }
+                items(pendings.size, key = { pendings[it].id }) { idx ->
+                    val m: Message = pendings[idx]
                     ErbianCard {
                         Text(m.body, fontSize = 14.sp, modifier = Modifier.padding(vertical = 4.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

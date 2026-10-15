@@ -1,26 +1,37 @@
 package com.lantianhcgp.erbian.ui.channel
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,10 +43,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lantianhcgp.erbian.ui.AppViewModel
+import com.lantianhcgp.erbian.ui.dockBottomInset
+import com.lantianhcgp.erbian.ui.hairlineModifier
+import com.lantianhcgp.erbian.ui.pressableScale
 import com.lantianhcgp.erbian.ui.widgets.CardTitle
 import com.lantianhcgp.erbian.ui.widgets.EmptyState
 import com.lantianhcgp.erbian.ui.widgets.ErbianCard
@@ -45,6 +61,12 @@ import model.Message
 import model.MsgKind
 import model.MsgStatus
 
+/**
+ * 频道页 v2（docs/ui-redo-spec.md §3，RikkaHub 结构）：
+ * - 输入栏走 bottomBar：键盘关=垫过 dock（dockBottomInset），键盘开=imePadding 顶起
+ * - 空态与列表走同一 padding 分支（根治"输入框被挤没/垫底错位"）
+ * - 气泡方向尾、hairline 描边语言、发送按钮状态机
+ */
 @Composable
 fun ChannelPage(vm: AppViewModel) {
     val messages by vm.channel.collectAsState()
@@ -55,80 +77,173 @@ fun ChannelPage(vm: AppViewModel) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
-        Row(
-            Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("频道", style = MaterialTheme.typography.titleMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatusDot(ok = vm.shizukuPermission, label = "Shizuku")
-                StatusDot(ok = vm.queueInFlight == 0, label = "通道")
-            }
-        }
+    // 键盘开合决定底垫：关=盖过 dock（含手势条）；开=交给 imePadding（dock 此时被键盘盖住无需避让）
+    val imeOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    val bottomPad = if (imeOpen) 8.dp else dockBottomInset()
 
-        if (messages.isEmpty()) {
-            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                EmptyState("这里还很安静", "长按电源键，或者在下面说点什么")
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
+    androidx.compose.material3.Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = { ChannelHeader(vm) },
+        bottomBar = {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 12.dp)
+                    .padding(bottom = bottomPad),
             ) {
-                items(messages, key = { it.id }) { m ->
-                    when (m.kind) {
-                        MsgKind.SUMMARY -> SummaryBar(m)
-                        MsgKind.TODO_CONFIRM -> TodoConfirmCard(m, vm)
-                        else -> Bubble(m, onResend = { vm.resend(m) })
-                    }
-                }
-            }
-        }
-
-        Surface(tonalElevation = 2.dp, shape = ErbianShapes(), modifier = Modifier.padding(bottom = 84.dp).padding(top = 4.dp)) {
-            Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
+                InputContainer(
                     value = input,
                     onValueChange = { input = it },
-                    modifier = Modifier.weight(1f).heightIn(min = 44.dp, max = 120.dp),
-                    placeholder = { Text("说点什么") },
-                    maxLines = 4,
-                )
-                IconButton(
-                    onClick = {
+                    onSend = {
                         val t = input.trim()
                         if (t.isNotEmpty()) { vm.send(t); input = "" }
                     },
-                    enabled = input.isNotBlank(),
-                ) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "发送") }
+                )
+            }
+        },
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            if (messages.isEmpty()) {
+                EmptyState("这里还很安静", "长按电源键，或者在下面说点什么")
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    items(messages, key = { it.id }) { m ->
+                        when (m.kind) {
+                            MsgKind.SUMMARY -> SummaryBar(m)
+                            MsgKind.TODO_CONFIRM -> TodoConfirmCard(m, vm)
+                            else -> Bubble(m, onResend = { vm.resend(m) })
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-// 圆角占位（顶部28/四角16 的频道输入条）
-private fun ErbianShapes(): RoundedCornerShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
+@Composable
+private fun ChannelHeader(vm: AppViewModel) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "频道",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            StatusDot(ok = vm.shizukuPermission, label = "Shizuku")
+            StatusDot(ok = vm.queueInFlight == 0, label = "通道")
+        }
+    }
+}
 
+/** 输入容器：圆角20外框+hairline+透明字段+30dp圆形发送（skill 状态机） */
+@Composable
+private fun InputContainer(value: String, onValueChange: (String) -> Unit, onSend: () -> Unit) {
+    val shape = RoundedCornerShape(20)
+    val sending = false
+    val empty = value.isBlank()
+    Surface(
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp, max = 140.dp),
+                placeholder = { Text("说点什么", fontSize = 15.sp) },
+                maxLines = 5,
+                textStyle = MaterialTheme.typography.bodyLarge,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                shape = RoundedCornerShape(16),
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "耳边 · 直达本机 Agent",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.weight(1f),
+                )
+                SendCircle(enabled = !empty && !sending, sending = sending, onClick = onSend)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SendCircle(enabled: Boolean, sending: Boolean, onClick: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val container = when {
+        sending -> scheme.primary
+        !enabled -> scheme.surfaceContainerHigh
+        else -> scheme.primary
+    }
+    val content = when {
+        !enabled -> scheme.onSurface.copy(alpha = 0.38f)
+        else -> scheme.onPrimary
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(30.dp)
+            .clip(CircleShape)
+            .background(container)
+            .pressableScale(onClick = { if (enabled) onClick() }),
+    ) {
+        Icon(
+            Icons.AutoMirrored.Filled.Send,
+            contentDescription = "发送",
+            tint = content,
+            modifier = Modifier.size(15.dp),
+        )
+    }
+}
+
+/** 气泡：方向尾 + 发送状态行 */
 @Composable
 private fun Bubble(m: Message, onResend: () -> Unit) {
     val isUser = m.origin in setOf("float", "channel")
+    val scheme = MaterialTheme.colorScheme
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
         Surface(
-            shape = if (isUser) RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
-            else RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp),
-            color = if (isUser) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.secondaryContainer,
+            shape = if (isUser) RoundedCornerShape(18, 18, 4, 18)
+            else RoundedCornerShape(18, 18, 18, 4),
+            color = if (isUser) scheme.primaryContainer else scheme.surfaceContainerHigh,
+            border = if (isUser) null else BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
+            tonalElevation = 0.dp,
             modifier = Modifier.widthIn(max = 300.dp),
         ) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Text(m.body, fontSize = 15.sp)
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Text(m.body, style = MaterialTheme.typography.bodyLarge)
                 if (isUser) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
@@ -137,9 +252,9 @@ private fun Bubble(m: Message, onResend: () -> Unit) {
                                 MsgStatus.SENT -> "已送达"
                                 MsgStatus.FAILED -> "失败，点击重发"
                             },
-                            fontSize = 11.sp,
-                            color = if (m.status == MsgStatus.FAILED) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (m.status == MsgStatus.FAILED) scheme.error
+                            else scheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = if (m.status == MsgStatus.FAILED) Modifier
                                 .clickable { onResend() } else Modifier,
                         )
@@ -150,12 +265,24 @@ private fun Bubble(m: Message, onResend: () -> Unit) {
     }
 }
 
+/** 摘要条：弱化（描边+斜体） */
 @Composable
 private fun SummaryBar(m: Message) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(10.dp)) {
-            Text("摘要", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
-            Text(m.body, fontSize = 13.sp, fontStyle = FontStyle.Italic, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Surface(
+        color = Color.Transparent,
+        shape = RoundedCornerShape(14),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Text("摘要", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(
+                m.body,
+                fontSize = 13.sp,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
+            )
         }
     }
 }

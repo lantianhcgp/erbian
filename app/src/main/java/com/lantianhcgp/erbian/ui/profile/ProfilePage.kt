@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.LinearProgressIndicator
@@ -13,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,9 +34,9 @@ fun ProfilePage(vm: AppViewModel) {
     val raw = vm.profileJson
     val cards = androidx.compose.runtime.remember(raw) { parseCards(raw) }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
-        Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("画像", style = MaterialTheme.typography.titleMedium)
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 14.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("画像", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
             PillButton("刷新", onClick = { vm.refresh() }, filled = false)
         }
 
@@ -43,7 +45,7 @@ fun ProfilePage(vm: AppViewModel) {
                 EmptyState("画像还没有内容", "多和我说说话，我眼里的你就会慢慢成形")
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 90.dp)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = com.lantianhcgp.erbian.ui.dockBottomInset())) {
                 items(cards, key = { it.title }) { c ->
                     ErbianCard {
                         Text(c.category, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)

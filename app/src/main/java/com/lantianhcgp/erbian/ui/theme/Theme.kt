@@ -7,10 +7,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.sp
 
 /** FlClash 圆角阶（设计文档 §七）。 */
 object Corners {
@@ -45,6 +49,19 @@ private fun ColorScheme.pureBlackShift(): ColorScheme {
     )
 }
 
+/** 字阶（ReadYou 启发：400/500/600 权重阶梯 + label 字距 0.5，spec §1）。 */
+private val ErbianTypography = Typography(
+    titleLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp, lineHeight = 28.sp),
+    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp, lineHeight = 22.sp),
+    titleSmall = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp, lineHeight = 20.sp),
+    bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 22.sp, letterSpacing = 0.15.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.1.sp),
+    bodySmall = TextStyle(fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp),
+    labelLarge = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp, lineHeight = 16.sp),
+    labelMedium = TextStyle(fontSize = 11.sp, letterSpacing = 0.4.sp, lineHeight = 16.sp),
+    labelSmall = TextStyle(fontSize = 11.sp, letterSpacing = 0.5.sp, lineHeight = 14.sp),
+)
+
 @Composable
 fun ErbianTheme(
     dynamicColor: Boolean = true,
@@ -62,5 +79,5 @@ fun ErbianTheme(
         else -> lightColorScheme()
     }
     val scheme = if (dark && pureBlack) base.pureBlackShift() else base
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(colorScheme = scheme, typography = ErbianTypography, content = content)
 }

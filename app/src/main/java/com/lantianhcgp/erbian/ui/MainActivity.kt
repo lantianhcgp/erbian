@@ -143,62 +143,22 @@ fun HomeScreen(vm: AppViewModel) {
 
     androidx.compose.material3.MaterialTheme {
         Box(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize()) {
-                AnimatedContent(
-                    targetState = page,
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
-                    },
-                    modifier = Modifier.weight(1f),
-                ) { p ->
-                    when (p) {
-                        0 -> ChannelPage(vm)
-                        1 -> SchedulePage(vm)
-                        2 -> ProfilePage(vm)
-                        else -> SettingsPage(vm)
-                    }
+            AnimatedContent(
+                targetState = page,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
+                },
+                modifier = Modifier.fillMaxSize(),
+            ) { p ->
+                when (p) {
+                    0 -> ChannelPage(vm)
+                    1 -> SchedulePage(vm)
+                    2 -> ProfilePage(vm)
+                    else -> SettingsPage(vm)
                 }
             }
-            Surface(
-                shape = ErbianShapes.Pill,
-                tonalElevation = 3.dp,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(bottom = 10.dp)
-                    .widthIn(max = 460.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            ) {
-                Row(
-                    Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                ) {
-                    tabs.forEachIndexed { i, tab ->
-                        val selected = page == i
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .semantics { contentDescription = i.toString() }
-                                .padding(horizontal = 14.dp, vertical = 4.dp)
-                                .clickable { page = i },
-                        ) {
-                            Icon(
-                                if (selected) tab.on else tab.off,
-                                contentDescription = tab.label,
-                                tint = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Text(
-                                tab.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
+            // 浮动 dock（spec §2：系统手势条边距/柔影/透镜选中）
+            ErbianDock(page = page, onSelected = { page = it })
         }
     }
 }

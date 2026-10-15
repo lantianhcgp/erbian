@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -41,11 +42,17 @@ fun SettingsPage(vm: AppViewModel) {
     Column(
         Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = 14.dp)
+            .padding(bottom = com.lantianhcgp.erbian.ui.dockBottomInset()),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("设置", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        Text(
+            "设置",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+        )
 
         // 唤醒状态
         ErbianCard {
