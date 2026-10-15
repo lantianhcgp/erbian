@@ -42,18 +42,50 @@ import kotlinx.coroutines.launch
  */
 class AssistSession(private val ctx: android.content.Context) : VoiceInteractionSession(ctx) {
 
-    // 小爱同款体验（用户预期 2026-10-15）：会话窗口自己长面板，不跳任何页面。
-    // 官方通道 = onCreateContentView()（v1.7 往 decorView 手塞视图时机不对永不显示；
-    // v1.8 的 activity 桥接被用户否掉——要的是"在当前 App 上方弹窗"）。
+    // 小爱同款体验（用户预期 2026-10-15）：面板直接浮在当前应用上方。
+    // 战史：会话窗口（onCreateContentView）系统只画入场动画不画内容——特权留给系统助理；
+    // activity 跳转被否。最终方案：会话回调当扳机，面板走自家悬浮窗（TYPE_APPLICATION_OVERLAY）。
     override fun onCreateContentView(): android.view.View? {
-        com.lantianhcgp.erbian.Locator.logger.i("session", "onCreateContentView -> SessionPanelView")
+        // 无悬浮窗权限时的兜底（模拟器等场景可用）
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onCreateContentView (fallback panel)")
         return SessionPanelView(ctx, onDismiss = { hide() })
     }
 
     // SDK35 真实签名: onShow(Bundle args, int showFlags)；收起用 hide()
     override fun onShow(args: android.os.Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        com.lantianhcgp.erbian.Locator.logger.i("session", "onShow flags=$showFlags (panel via onCreateContentView)")
+        com.lantianhcgp.erbian.Locator.logger.i("session", "onShow flags=$showFlags")
+        if (!android.provider.Settings.canDrawOverlays(ctx)) {
+            com.lantianhcgp.erbian.Locator.logger.e("session", "no SYSTEM_ALERT_WINDOW - overlay skipped (fallback panel)")
+            return
+        }
+        showOverlay()
+    }
+
+    private fun showOverlay() {
+        val wm = ctx.getSystemService(android.content.WindowManager::class.java)
+        val params = android.view.WindowManager.LayoutParams(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            0,
+            android.graphics.PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = android.view.Gravity.BOTTOM
+            softInputMode = android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+        }
+        var panel: SessionPanelView? = null
+        panel = SessionPanelView(ctx, onDismiss = {
+            runCatching { wm.removeView(panel) }
+            hide()
+        })
+        runCatching {
+            wm.addView(panel, params)
+            com.lantianhcgp.erbian.Locator.logger.i("session", "overlay panel added (over current app)")
+        }.onFailure {
+            com.lantianhcgp.erbian.Locator.logger.e("session", "overlay add failed: $it")
+            finish()
+        }
     }
 }
 
