@@ -142,9 +142,13 @@ dump_dev /sdcard/t02.xml
 shot "$EV/T02-input-typing.png" || true
 
 echo "== tour: T03 sent bubble =="
-R "input keyevent 4"   # 收键盘
-sleep 1
-b=$(bounds_desc /sdcard/t02.xml 'content-desc=发送')
+# 仅当键盘在前台才 BACK（否则会穿透退 Activity —— t03 曾变桌面树的病根）
+dump_dev /sdcard/t02b.xml
+if R "cat /sdcard/t02b.xml" 2>/dev/null | grep -qi "inputmethod"; then
+  R "input keyevent 4"
+  sleep 1
+fi
+b=$(bounds_desc /sdcard/t02.xml 'desc=发送')
 if [ -n "$b" ]; then
   cx=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[0]+n[2])//2)" "$b")
   cy=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[1]+n[3])//2)" "$b")
@@ -182,7 +186,8 @@ R "run-as $PKG sh -c 'cat > files/profile.json'" <<'CARD'
 CARD
 sleep 1
 R "am force-stop $PKG"; sleep 1; R "am start -n $PKG/.ui.MainActivity > /dev/null"; sleep 3
-tap_sel /sdcard/t05.xml 'desc=2' || true
+dump_dev /sdcard/t06pre.xml
+tap_sel /sdcard/t06pre.xml 'desc=2' || true
 sleep 2
 dump_dev /sdcard/t06.xml
 shot "$EV/T06-profile-card.png" || true
