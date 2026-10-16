@@ -72,6 +72,24 @@ pull_dump() { # $1=设备路径 → 本地 $EV/$(basename)（状态断言要用�
   fi
 }
 
+# 键盘检测必须走 dumpsys（2026-10-16 实测: uiautomator dump 不含 IME 窗口，
+# 旧的 dump 里 grep inputmethod 恒为假 → BACK 从未执行 → 键盘连压 T03~T05 三步、
+# dock 点击全落键盘上，页面断言只靠层级 diff 还假通过）
+close_ime() {
+  local i s
+  for i in 1 2 3; do
+    s=$(R "dumpsys input_method" | tr -d '\r')
+    if echo "$s" | grep -q "mInputShown=true"; then
+      echo "  close_ime: 键盘在前台, BACK 收起"
+      R "input keyevent 4"
+      sleep 1
+      continue
+    fi
+    echo "$s" | grep -q "mInputShown" && return 0
+    return 0  # 字段缺失（新 ROM 改名）时无法判断，交给页面级断言兜底
+  done
+}
+
 dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败（set -e 已撤）
   local i out n=0
   for i in 1 2 3; do
@@ -190,13 +208,8 @@ dump_has t02.xml 'component-tour-ok' 'T02 键入文本已进输入框'
 dump_diff t01.xml t02.xml 'T02 与 T01 层级不同(键盘/输入态)'
 
 echo "== tour: T03 sent bubble =="
-# 仅当键盘在前台才 BACK（否则会穿透退 Activity —— t03 曾变桌面树的病根）
-dump_dev /sdcard/t02b.xml
-if python3 -c "import sys; sys.exit(0 if 'inputmethod' in open(sys.argv[1],errors='ignore').read() else 1)" "$EV/t02b.xml" 2>/dev/null; then
-  R "input keyevent 4"
-  sleep 1
-fi
-# 键盘收起后布局会整体回移，必须重取 dump 再找发送键（旧版拿键盘展开态的坐标，y差800px）
+close_ime   # dumpsys 判定收键盘；旧版 grep dump 判 IME 恒假，键盘连压三步
+# 键盘收起后布局会整体回移，必须重取 dump 再找发送键
 dump_dev /sdcard/t02c.xml
 b=$(bounds_desc /sdcard/t02c.xml 'desc=发送')
 [ -z "$b" ] && b=$(bounds_desc /sdcard/t02.xml 'desc=发送')
@@ -209,7 +222,7 @@ fi
 sleep 3
 dump_dev /sdcard/t03.xml
 shot "$EV/T03-bubble.png" || true
-dump_has t03.xml 'component-tour-ok' 'T03 气泡已出现在频道'
+dump_has t03.xml '已送达' 'T03 气泡已发送(已送达回执)'
 dump_diff t01.xml t03.xml 'T03 与 T01 层级不同'
 png_diff T01-channel.png T03-bubble.png 'T03 帧≠T01帧'
 
@@ -224,17 +237,20 @@ fi
 sleep 2
 dump_dev /sdcard/t04.xml
 shot "$EV/T04-longpress-menu.png" || true
+dump_has t04.xml '复制' 'T04 长按菜单(复制/重发)'
 dump_diff t03.xml t04.xml 'T04 长按菜单浮层出现'
 png_diff T03-bubble.png T04-longpress-menu.png 'T04 帧≠T03帧'
 R "input keyevent 4"
 sleep 1
 
 echo "== tour: T05 schedule =="
+close_ime   # 菜单关掉后键盘可能残留，dock 点击前必须确保无 IME
 tap_sel /sdcard/t01.xml 'desc=1' || true
 sleep 2
 dump_dev /sdcard/t05.xml
 shot "$EV/T05-schedule.png" || true
-dump_diff t01.xml t05.xml 'T05 已从频道切走'
+dump_has t05.xml '耳边待办' 'T05 已切到日程页(页面独有标记)'
+dump_diff t01.xml t05.xml 'T05 与 T01 层级不同'
 png_diff T01-channel.png T05-schedule.png 'T05 帧≠T01帧'
 
 echo "== tour: T06 profile with seeded card + evidence expand =="
