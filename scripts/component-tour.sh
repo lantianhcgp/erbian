@@ -52,20 +52,24 @@ PYEOF
 }
 
 tap_sel() { # $1=dump $2=selector
-  local b cx cy
+  # 坑(2026-10-16): bounds_desc 已改为直接输出中心点 "cx cy"(2个数)，旧版这里按 4 坐标
+  # 格式取 n[2] → IndexError → cx/cy 空 → input tap 空操作 → 9帧7张同画还全绿。
+  local b
   b=$(bounds_desc "$1" "$2")
-  [ -z "$b" ] && { echo "  tap_sel miss: $2"; return 1; }
-  cx=$(( (${b:1:4}%%,*} + ${b%%,*} ... ) ))
+  if [ -z "$b" ]; then echo "  tap_sel miss: $2"; return 1; fi
+  case "$b" in
+    *[!0-9\ ]*) echo "  tap_sel BAD b=[$b] $2"; return 1 ;;
+  esac
+  R "input tap $b"
+  echo "  tap $2 -> $b"
 }
-# 上面写法太脆，改用 python 解析
-tap_sel() {
-  local b cx cy
-  b=$(bounds_desc "$1" "$2")
-  [ -z "$b" ] && { echo "  tap_sel miss: $2"; return 1; }
-  cx=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[0]+n[2])//2)" "$b")
-  cy=$(python3 -c "import sys,re; n=list(map(int,re.findall(r'\d+',sys.argv[1]))); print((n[1]+n[3])//2)" "$b")
-  R "input tap $cx $cy"
-  echo "  tap $2 -> $cx $cy"
+
+pull_dump() { # $1=设备路径 → 本地 $EV/$(basename)（状态断言要用本地文件）
+  if [ -x "$HOME/rish/rish_t" ]; then
+    R "cat $1" > "$EV/$(basename "$1")" 2>/dev/null || true
+  else
+    adb pull "$1" "$EV/$(basename "$1")" >/dev/null 2>&1 || true
+  fi
 }
 
 dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败（set -e 已撤）
@@ -75,6 +79,7 @@ dump_dev() { # $1=设备路径；wc -c 取真字节，重试3次，永不置败�
     n=$(R "wc -c $1" 2>/dev/null | tr -d '\r' | tr -dc '0-9')
     if [ "${n:-0}" -gt 1000 ] 2>/dev/null; then
       echo "  dump $1 bytes=$n (${out:0:40})"
+      pull_dump "$1"
       return 0
     fi
     sleep 2
@@ -128,6 +133,47 @@ echo "tour-install: $(tail -1 "$EV/tour_install.txt" 2>/dev/null)"
 pp=$(timeout 20 adb shell pm path $PKG 2>/dev/null | tr -d '\r' | head -1)
 echo "pm-path-after-install: $pp"
 
+# ---------- 状态断言（2026-10-16 加） ----------
+# 背景: 上一轮 CI 9 帧里 7 张是同一画面(dump md5 全同)却全绿 —— 点击空操作 + 零断言。
+# 原则: 每步必须证明"页面/状态真的变了"，任何一条失败 → TOUR_ASSERT_FAIL + exit 1。
+TOUR_FAIL=0
+
+dump_has() { # $1=dump basename(在$EV) $2=needle $3=label —— 层级里必须出现标记
+  local f="$EV/$1"
+  if [ ! -s "$f" ]; then echo "  ASSERT FAIL $3 (missing $1)"; TOUR_FAIL=1; return 1; fi
+  if python3 - "$f" "$2" <<'PYEOF'
+import sys
+xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
+sys.exit(0 if sys.argv[2] in xml else 1)
+PYEOF
+  then echo "  ASSERT OK   $3"; else echo "  ASSERT FAIL $3 (marker not in $1: $2)"; TOUR_FAIL=1; return 1; fi
+}
+
+dump_lacks() { # 与 dump_has 相反：层级里不该出现（如折叠态不该露出证据正文）
+  local f="$EV/$1"
+  if [ ! -s "$f" ]; then echo "  ASSERT FAIL $3 (missing $1)"; TOUR_FAIL=1; return 1; fi
+  if python3 - "$f" "$2" <<'PYEOF'
+import sys
+xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
+sys.exit(1 if sys.argv[2] in xml else 0)
+PYEOF
+  then echo "  ASSERT OK   $3"; else echo "  ASSERT FAIL $3 (不该出现却出现: $2)"; TOUR_FAIL=1; return 1; fi
+}
+
+dump_diff() { # $1=dumpA $2=dumpB $3=label —— 两状态层级必须不同（同 md5 = 没切页）
+  local a b
+  a=$(md5sum "$EV/$1" 2>/dev/null | cut -d' ' -f1)
+  b=$(md5sum "$EV/$2" 2>/dev/null | cut -d' ' -f1)
+  if [ -n "$a" ] && [ -n "$b" ] && [ "$a" != "$b" ]; then echo "  ASSERT OK   $3"; else echo "  ASSERT FAIL $3 ($1 与 $2 层级相同)"; TOUR_FAIL=1; fi
+}
+
+png_diff() { # $1=pngA $2=pngB $3=label —— 帧字节级必须不同（状态栏时钟是唯一合法差异源）
+  local a b
+  a=$(md5sum "$EV/$1" 2>/dev/null | cut -d' ' -f1)
+  b=$(md5sum "$EV/$2" 2>/dev/null | cut -d' ' -f1)
+  if [ -n "$a" ] && [ -n "$b" ] && [ "$a" != "$b" ]; then echo "  ASSERT OK   $3"; else echo "  ASSERT FAIL $3 ($1 与 $2 字节相同)"; TOUR_FAIL=1; fi
+}
+
 echo "== tour: T01 channel base =="
 launch
 dump_dev /sdcard/t01.xml
@@ -140,32 +186,46 @@ R "input text component-tour-ok"
 sleep 1
 dump_dev /sdcard/t02.xml
 shot "$EV/T02-input-typing.png" || true
+dump_has t02.xml 'component-tour-ok' 'T02 键入文本已进输入框'
+dump_diff t01.xml t02.xml 'T02 与 T01 层级不同(键盘/输入态)'
 
 echo "== tour: T03 sent bubble =="
 # 仅当键盘在前台才 BACK（否则会穿透退 Activity —— t03 曾变桌面树的病根）
 dump_dev /sdcard/t02b.xml
-if R "cat /sdcard/t02b.xml" 2>/dev/null | grep -qi "inputmethod"; then
+if python3 -c "import sys; sys.exit(0 if 'inputmethod' in open(sys.argv[1],errors='ignore').read() else 1)" "$EV/t02b.xml" 2>/dev/null; then
   R "input keyevent 4"
   sleep 1
 fi
-b=$(bounds_desc /sdcard/t02.xml 'desc=发送')
+# 键盘收起后布局会整体回移，必须重取 dump 再找发送键（旧版拿键盘展开态的坐标，y差800px）
+dump_dev /sdcard/t02c.xml
+b=$(bounds_desc /sdcard/t02c.xml 'desc=发送')
+[ -z "$b" ] && b=$(bounds_desc /sdcard/t02.xml 'desc=发送')
 if [ -n "$b" ]; then
   R "input tap $b"   # b 已是 "cx cy" 中心点（bounds_desc 直接输出）
   echo "  send tap -> $b"
+else
+  echo "  ASSERT FAIL T03 找不到发送键"; TOUR_FAIL=1
 fi
 sleep 3
 dump_dev /sdcard/t03.xml
 shot "$EV/T03-bubble.png" || true
+dump_has t03.xml 'component-tour-ok' 'T03 气泡已出现在频道'
+dump_diff t01.xml t03.xml 'T03 与 T01 层级不同'
+png_diff T01-channel.png T03-bubble.png 'T03 帧≠T01帧'
 
 echo "== tour: T04 long-press bubble menu =="
 b=$(bounds_desc /sdcard/t03.xml 'text=component-tour-ok')
 if [ -n "$b" ]; then
   R "input swipe $b $b 1200"
   echo "  longpress -> $b"
+else
+  echo "  ASSERT FAIL T04 找不到气泡(无法长按)"; TOUR_FAIL=1
 fi
 sleep 2
 dump_dev /sdcard/t04.xml
 shot "$EV/T04-longpress-menu.png" || true
+dump_diff t03.xml t04.xml 'T04 长按菜单浮层出现'
+png_diff T03-bubble.png T04-longpress-menu.png 'T04 帧≠T03帧'
 R "input keyevent 4"
 sleep 1
 
@@ -174,6 +234,8 @@ tap_sel /sdcard/t01.xml 'desc=1' || true
 sleep 2
 dump_dev /sdcard/t05.xml
 shot "$EV/T05-schedule.png" || true
+dump_diff t01.xml t05.xml 'T05 已从频道切走'
+png_diff T01-channel.png T05-schedule.png 'T05 帧≠T01帧'
 
 echo "== tour: T06 profile with seeded card + evidence expand =="
 # 种样本卡（3条证据测折叠）
@@ -190,16 +252,23 @@ tap_sel /sdcard/t06pre.xml 'desc=2' || true
 sleep 2
 dump_dev /sdcard/t06.xml
 shot "$EV/T06-profile-card.png" || true
+dump_has t06.xml '英语听写需自带耳机' 'T06 样本卡已渲染'
+dump_lacks t06.xml '周三听写前确认耳机' 'T06 证据默认折叠(不露正文)'
 tap_sel /sdcard/t06.xml 'text=点按展开' || tap_sel /sdcard/t06.xml 'text=共3条证据，点按展开' || true
 sleep 1
 dump_dev /sdcard/t06b.xml
 shot "$EV/T06b-profile-expanded.png" || true
+dump_has t06b.xml '周三听写前确认耳机' 'T06b 证据已展开'
+dump_diff t06.xml t06b.xml 'T06b 与 T06 层级不同'
+png_diff T06-profile-card.png T06b-profile-expanded.png 'T06b 帧≠T06帧'
 
 echo "== tour: T07 settings =="
 tap_sel /sdcard/t06b.xml 'desc=3' || true
 sleep 2
 dump_dev /sdcard/t07.xml
 shot "$EV/T07-settings.png" || true
+dump_diff t06b.xml t07.xml 'T07 已从画像切走'
+png_diff T06b-profile-expanded.png T07-settings.png 'T07 帧≠T06b帧'
 
 echo "== tour: T08 wake panel =="
 R "am force-stop $PKG"; sleep 1
@@ -207,6 +276,7 @@ R "am start -a android.intent.action.ASSIST -n $PKG/.ui.MainActivity > /dev/null
 sleep 4
 dump_dev /sdcard/t08.xml
 shot "$EV/T08-wake-panel.png" || true
+dump_has t08.xml '发送' 'T08 唤醒面板出现'
 
 echo "== tour: T09 wake panel typing =="
 tap_sel /sdcard/t08.xml 'text=说点什么' || true
@@ -215,6 +285,41 @@ R "input text panel-typing"
 sleep 1
 dump_dev /sdcard/t09.xml
 shot "$EV/T09-panel-typing.png" || true
+dump_has t09.xml 'panel-typing' 'T09 面板键入文本已进输入框'
+dump_diff t08.xml t09.xml 'T09 与 T08 层级不同'
+png_diff T08-wake-panel.png T09-panel-typing.png 'T09 帧≠T08帧'
+
+echo "== tour: backstop — 全部 T 帧两两不得字节相同 =="
+BTFAIL=0
+for a in "$EV"/T*.png; do
+  for c in "$EV"/T*.png; do
+    [ "$a" \< "$c" ] || continue
+    if [ -f "$a" ] && [ -f "$c" ] && cmp -s "$a" "$c"; then
+      echo "  ASSERT FAIL 帧重复: $(basename "$a") == $(basename "$c")"; BTFAIL=1; TOUR_FAIL=1
+    fi
+  done
+done
+[ "$BTFAIL" = 0 ] && echo "  ASSERT OK   9帧字节互不相同"
+
+echo "== tour: layout gate (dock 状态帧; T02/T08/T09=键盘或浮层态无 dock，豁免) =="
+for f in T01-channel T03-bubble T04-longpress-menu T05-schedule T06-profile-card T06b-profile-expanded T07-settings; do
+  r=$(python3 scripts/layout_probe.py "$EV/$f.png" 2>&1) || TOUR_FAIL=1
+  echo "layout_probe $f.png: $r"
+done
 
 echo "TOUR_DONE"
 ls -la "$EV"/T*.png | awk '{print $5, $9}'
+
+# ---------- 收口：断言汇总 + 全 verdict 终局门禁 ----------
+if [ "$TOUR_FAIL" = 0 ]; then
+  echo "TOUR_ASSERT_PASS" | tee -a "$EV/verdict.txt"
+else
+  echo "TOUR_ASSERT_FAIL" | tee -a "$EV/verdict.txt"
+fi
+echo "-- verdict 全文 --"; cat "$EV/verdict.txt" 2>/dev/null
+# 此前所有门禁都 || true 报告制、FAIL 也绿(2026-10-16)。终局门禁：任何 *_FAIL → CI 红。
+if grep -q '_FAIL' "$EV/verdict.txt" 2>/dev/null; then
+  echo "VERDICT_GATE_FAIL"
+  exit 1
+fi
+echo "VERDICT_GATE_PASS"
