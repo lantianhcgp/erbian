@@ -101,6 +101,9 @@ dependencies {
 
     // Shizuku — 唤醒设置自检自愈
     implementation("dev.rikka.shizuku:api:13.1.5")
+    // ShizukuProvider 类在 shared artifact（官方 demo 同款两件套）；
+    // 只引 api 时 Manifest 声明 provider → 启动即 ClassNotFoundException 崩溃（2026-10-17 CI 实锤）
+    implementation("dev.rikka.shizuku:shared:13.1.5")
 
     // 测试
     testImplementation("junit:junit:4.13.2")
