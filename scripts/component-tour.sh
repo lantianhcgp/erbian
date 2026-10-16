@@ -150,6 +150,11 @@ fi
 echo "tour-install: $(tail -1 "$EV/tour_install.txt" 2>/dev/null)"
 pp=$(timeout 20 adb shell pm path $PKG 2>/dev/null | tr -d '\r' | head -1)
 echo "pm-path-after-install: $pp"
+# 预授权日历：instrumentation 收尾卸主包 → 巡检重装=全新包 → 权限重置 →
+# SchedulePage 首次组合弹系统对话框占满 dump，T05~T07 连环假/红（2026-10-16 实测）
+timeout 20 adb shell pm grant $PKG android.permission.READ_CALENDAR > "$EV/grant.txt" 2>&1 || true
+timeout 20 adb shell pm grant $PKG android.permission.WRITE_CALENDAR >> "$EV/grant.txt" 2>&1 || true
+echo "grant: $(tr -d '\r' < "$EV/grant.txt" | grep -v '^$' | tail -2 | tr '\n' ';')"
 
 # ---------- 状态断言（2026-10-16 加） ----------
 # 背景: 上一轮 CI 9 帧里 7 张是同一画面(dump md5 全同)却全绿 —— 点击空操作 + 零断言。
