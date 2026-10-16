@@ -40,7 +40,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class CalEvent(val day: String, val title: String, val time: String)
+private data class CalEvent(val id: String, val day: String, val title: String, val time: String)
 
 /** 页面统一页头（statusBars 避让 + 标题字重阶梯） */
 @Composable
@@ -48,6 +48,9 @@ fun PageHeader(title: String, modifier: Modifier = Modifier) {
     Text(
         title,
         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        // 2026-10-16 夜间实测：标题默认 content color 落在纯黑 rgb(0,0,0)（频道页在同一色板下却是白的），
+        // 用户真机复现同样问题 → 显式绑定 onSurface，夜间随色板变白
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
@@ -98,6 +101,14 @@ fun SchedulePage(vm: AppViewModel) {
 
     val grouped = remember(events) { events.groupBy { it.day } }
 
+    // B5：删除结果回来后重查日历（todoNote 变化即触发一次）
+    LaunchedEffect(vm.todoNote) {
+        if (vm.todoNote != null) {
+            kotlinx.coroutines.delay(300)
+            events = runCatching { queryErbianEvents(context) }.getOrDefault(events)
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         PageHeader("日程")
         LazyColumn(
@@ -127,16 +138,47 @@ fun SchedulePage(vm: AppViewModel) {
                     }
                     items(list.size, key = { "$day-$it" }) { idx ->
                         val e = list[idx]
+                        // B5（2026-10-16 用户）：待办要能删（画像不加删除）。点一次→确认态→再点执行。
+                        var confirmDel by remember { mutableStateOf(false) }
                         ErbianCard {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(e.title, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                    if (confirmDel) {
+                                        Text(
+                                            vm.todoNote ?: "删除这条待办？",
+                                            fontSize = 11.sp,
+                                            color = if (vm.todoNote != null) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.padding(top = 2.dp),
+                                        )
+                                    }
                                 }
                                 Text(
                                     e.time,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
+                                if (!confirmDel) {
+                                    androidx.compose.material3.IconButton(
+                                        onClick = { confirmDel = true },
+                                    ) {
+                                        androidx.compose.material3.Icon(
+                                            androidx.compose.material.icons.Icons.Outlined.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.size(18.dp),
+                )
+                                    }
+                                } else {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        PillButton("删除", onClick = {
+                                            vm.deleteCalendarEvent(e.id)
+                                            confirmDel = false
+                                        })
+                                        PillButton("取消", onClick = { confirmDel = false }, filled = false)
+                                    }
+                                }
                             }
                         }
                     }
@@ -181,11 +223,12 @@ private fun queryErbianEvents(context: android.content.Context): List<CalEvent> 
     val idList = calIds.joinToString(",")
     context.contentResolver.query(
         CalendarContract.Events.CONTENT_URI,
-        arrayOf(CalendarContract.Events.TITLE, CalendarContract.Events.DTSTART, CalendarContract.Events.ALL_DAY),
+        arrayOf(CalendarContract.Events._ID, CalendarContract.Events.TITLE, CalendarContract.Events.DTSTART, CalendarContract.Events.ALL_DAY),
         "${CalendarContract.Events.CALENDAR_ID} IN ($idList) AND ${CalendarContract.Events.DELETED}!=1",
         null,
         "${CalendarContract.Events.DTSTART} ASC",
     )?.use { c ->
+        val idIdx = c.getColumnIndex(CalendarContract.Events._ID)
         val titleIdx = c.getColumnIndex(CalendarContract.Events.TITLE)
         val startIdx = c.getColumnIndex(CalendarContract.Events.DTSTART)
         val allDayIdx = c.getColumnIndex(CalendarContract.Events.ALL_DAY)
@@ -194,6 +237,7 @@ private fun queryErbianEvents(context: android.content.Context): List<CalEvent> 
             val allDay = c.getInt(allDayIdx) == 1
             out.add(
                 CalEvent(
+                    id = c.getString(idIdx) ?: "",
                     day = dayFmt.format(Date(start)),
                     title = c.getString(titleIdx) ?: "(无标题)",
                     time = if (allDay) "全天" else timeFmt.format(Date(start)),

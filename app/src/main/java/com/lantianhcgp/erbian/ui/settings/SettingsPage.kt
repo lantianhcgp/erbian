@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,6 +62,7 @@ fun SettingsPage(vm: AppViewModel) {
         Text(
             "设置",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
         )
 
@@ -91,12 +93,12 @@ fun SettingsPage(vm: AppViewModel) {
         // 权限
         ErbianCard {
             CardTitle("权限")
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth().clickable { vm.requestShizuku() }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Shizuku", fontSize = 13.sp)
                 Text(
                     when {
                         !vm.shizukuAvailable -> "未运行（打开 Shizuku 启动）"
-                        !vm.shizukuPermission -> "未授权（弹窗允许耳边）"
+                        !vm.shizukuPermission -> "未授权（点此发起授权）"
                         else -> "已授权"
                     },
                     fontSize = 13.sp,
@@ -120,6 +122,25 @@ fun SettingsPage(vm: AppViewModel) {
                 )
             }
             Text("Shizuku 用于唤醒设置自检自愈；未授权不影响核心收发", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+        }
+
+        // F4 连通性（2026-10-16 用户：设置页加 health 一键 ping agent 端口）
+        ErbianCard {
+            CardTitle("连通性")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Agent 端口 8644", fontSize = 13.sp)
+                PillButton("Ping", onClick = { vm.pingAgent() })
+            }
+            vm.agentHealth?.let { h ->
+                Text(
+                    h,
+                    fontSize = 11.sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    color = if (h.contains("HTTP 2")) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
         }
 
         // 日志（用户可见，完整运行日志）
@@ -220,7 +241,7 @@ private fun LogScreen(vm: AppViewModel, onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("运行日志", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
+            Text("运行日志", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PillButton("刷新", onClick = { tick++ }, filled = false)
                 PillButton("返回", onClick = onBack, filled = false)
@@ -239,16 +260,35 @@ private fun LogScreen(vm: AppViewModel, onBack: () -> Unit) {
             modifier = Modifier.padding(vertical = 4.dp),
         )
         Spacer(Modifier.height(2.dp))
-        LazyColumn(Modifier.weight(1f)) {
-            items(lines) { l ->
-                Text(
-                    l,
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(vertical = 1.dp),
+        // F1（2026-10-16 用户）：日志长按可选中复制（SelectionContainer）+ 一键发送给 agent 诊断
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PillButton("发送诊断给 Agent", onClick = { vm.sendLogDiagnostics() })
+            PillButton("复制全部", onClick = {
+                androidx.compose.ui.platform.LocalClipboardManager.current.setText(
+                    androidx.compose.ui.text.AnnotatedString(lines.joinToString("\n"))
                 )
+            }, filled = false)
+        }
+        vm.diagNote?.let {
+            Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary,
+                 modifier = Modifier.padding(bottom = 4.dp))
+        }
+        androidx.compose.foundation.selection.SelectionContainer {
+            LazyColumn(Modifier.weight(1f)) {
+                items(lines) { l ->
+                    Text(
+                        l,
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(vertical = 1.dp),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(com.lantianhcgp.erbian.ui.dockBottomInset()))

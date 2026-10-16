@@ -206,6 +206,11 @@ for d in 0 1 2 3; do
   if python3 scripts/bg_probe.py "$OUT" --expect dark 2>&1 | tee -a "$EV/bg_probe.txt" | grep -q FAIL; then
     DARK_OK=0; FUNC_FAIL=1
   fi
+  # 2026-10-16 用户：夜间三页大标题是黑的 → 页头文字带必须有亮字（防回归）
+  if python3 scripts/title_probe.py "$OUT" --expect dark 2>&1 | tee -a "$EV/title_probe.txt" | grep -q FAIL; then
+    bad "夜间标题未适配 $MK"
+    FUNC_FAIL=1
+  fi
 done
 [ "$DARK_OK" = 1 ] && ok "夜间 4 页背景全暗"
 
@@ -222,6 +227,11 @@ if python3 scripts/bg_probe.py "$EV/light_p0.png" --expect light 2>&1 | tee -a "
   bad "恢复浅色后背景未变亮"
 else
   ok "已恢复浅色模式"
+fi
+if python3 scripts/title_probe.py "$EV/light_p0.png" --expect light 2>&1 | tee -a "$EV/title_probe.txt" | grep -q FAIL; then
+  bad "浅色页头缺深字（标题异常）"
+else
+  ok "浅色页头标题正常"
 fi
 
 echo "-- 功能/连通性/黑夜 汇总 --"

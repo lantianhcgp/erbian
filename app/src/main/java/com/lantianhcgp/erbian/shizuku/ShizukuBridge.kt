@@ -16,6 +16,24 @@ class ShizukuBridge(private val log: Logger) {
         isAvailable() && Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
+    /**
+     * 发起真实授权弹窗（2026-10-16 用户：「压根就没有向用户发起授权」）。
+     * Shizuku 官方 API：弹系统授权对话框，结果经 addRequestPermissionResultListener 回来。
+     */
+    fun requestPermission(requestCode: Int = 1001) {
+        if (!isAvailable()) { log.i("shizuku", "requestPermission skipped: shizuku not running"); return }
+        runCatching { Shizuku.requestPermission(requestCode) }
+            .onFailure { log.i("shizuku", "requestPermission error: $it") }
+    }
+
+    /** 权限结果监听（granted=true/false），返回注销句柄无意义——App 生命周期内只注册一次。 */
+    fun addPermissionListener(onResult: (Boolean) -> Unit): Boolean = runCatching {
+        Shizuku.addRequestPermissionResultListener { _, grantResult ->
+            onResult(grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED)
+        }
+        true
+    }.getOrDefault(false)
+
     fun readWakeSettings(): WakeSettings? {
         if (!hasPermission()) return null
         return WakeSettings(

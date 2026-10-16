@@ -40,6 +40,10 @@ object Locator {
     }
     val server: ErbianServer by lazy { ErbianServer() }
 
+    /** 2026-10-16：/api/profile 写完通知 UI 重读（agent 改画像后页面不刷新的修复）。 */
+    @Volatile
+    var onProfileChanged: (() -> Unit)? = null
+
     fun appFiles() = app.filesDir
 
     /** Settings.Secure.assistant 目标组件（本应用）。 */

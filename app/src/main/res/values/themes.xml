@@ -4,6 +4,8 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
+        <!-- 2026-10-16：窗口底与 colorScheme.background(#FFFBFE) 对齐，edge-to-edge 未覆盖处不露白 -->
+        <item name="android:windowBackground">#FFFBFE</item>
     </style>
 
     <!-- 唤醒浮层模式：窗口透明，桌面/原应用透出，只留底部面板+自绘遮罩（弹窗效果） -->

@@ -61,6 +61,8 @@ class ErbianServer {
                     }
                     deps.appFiles().resolve("profile.json").writeText(body)
                     log.i("server", "profile.json updated (${body.length} chars)")
+                    // 2026-10-16 用户：agent 删了画像卡但页面还显示旧的 → 写完通知 UI 重读
+                    runCatching { deps.onProfileChanged?.invoke() }
                     call.respondText("""{"ok":true}""", ContentType.Application.Json)
                 }
                 post("/mcp") {

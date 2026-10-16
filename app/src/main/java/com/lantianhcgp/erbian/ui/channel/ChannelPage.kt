@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.width
@@ -84,8 +85,9 @@ fun ChannelPage(vm: AppViewModel) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages.size, vm.agentProcessing) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+        else if (vm.agentProcessing) listState.animateScrollToItem(0)
     }
 
     // 键盘开合决定底垫：关=盖过 dock（含手势条）；开=交给 imePadding（dock 此时被键盘盖住无需避让）
@@ -130,8 +132,18 @@ fun ChannelPage(vm: AppViewModel) {
                         when (m.kind) {
                             MsgKind.SUMMARY -> SummaryBar(m)
                             MsgKind.TODO_CONFIRM -> TodoConfirmCard(m, vm)
-                            else -> Bubble(m, onResend = { vm.resend(m) }, onNotRight = { vm.send("这条不对：" + m.body) })
+                            else -> Bubble(
+                                m,
+                                onResend = { vm.resend(m) },
+                                onNotRight = { vm.send("这条不对：" + m.body) },
+                                // F2（2026-10-16）：把这条记录交给 agent 分析/记录
+                                onAnalyze = { vm.send("请分析这条记录并给出处理：" + m.body) },
+                            )
                         }
+                    }
+                    // F3（2026-10-16 用户）：agent 处理中的进行时指示
+                    if (vm.agentProcessing) {
+                        item(key = "agent-typing") { TypingRow() }
                     }
                 }
             }
@@ -246,7 +258,7 @@ private fun SendCircle(enabled: Boolean, sending: Boolean, onClick: () -> Unit) 
 /** 气泡：方向尾 + 发送状态行 */
 @Composable
 @androidx.compose.foundation.ExperimentalFoundationApi
-private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit) {
+private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit, onAnalyze: () -> Unit = {}) {
     val isUser = m.origin in setOf("float", "channel")
     var menuOpen by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -303,8 +315,54 @@ private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit) {
             } else {
                 androidx.compose.material3.DropdownMenuItem(text = { Text("这条不对") }, onClick = { menuOpen = false; onNotRight() })
             }
+            // F2（2026-10-16）：一键把这条文字记录交给 agent（等同系统菜单里的"记录"意图）
+            androidx.compose.material3.DropdownMenuItem(
+                text = { Text("记录到 Agent") },
+                onClick = { menuOpen = false; onAnalyze() },
+            )
         }
         }
+    }
+}
+
+/** F3：agent 处理中的进行时指示（三点脉冲 + 文字）。 */
+@androidx.compose.runtime.Composable
+private fun TypingRow() {
+    val t = androidx.compose.animation.rememberInfiniteTransition(label = "typing")
+    val pulse by t.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(650),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "pulse",
+    )
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp)) {
+        Surface(
+            shape = RoundedCornerShape(18, 18, 18, 4),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.semantics { contentDescription = "agent处理中" },
+        ) {
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                repeat(3) {
+                    Box(
+                        Modifier
+                            .size(7.dp)
+                            .graphicsLayer { alpha = pulse }
+                            .background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                    )
+                }
+            }
+        }
+        Text(
+            "  正在处理…",
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

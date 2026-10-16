@@ -44,7 +44,7 @@ fun ProfilePage(vm: AppViewModel) {
 
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 14.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("画像", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
+            Text("画像", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
             PillButton("刷新", onClick = { vm.refresh() }, filled = false)
         }
 

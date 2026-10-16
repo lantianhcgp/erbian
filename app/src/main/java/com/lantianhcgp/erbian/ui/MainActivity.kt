@@ -58,8 +58,7 @@ import model.Message
 import model.MsgKind
 
 class MainActivity : ComponentActivity() {
-
-    // onNewIntent 复用场景（App 已在前台时长按电源）也要切到面板 —— v1.6 真机实锤的 bug
+// onNewIntent 复用场景（App 已在前台时长按电源）也要切到面板 —— v1.6 真机实锤的 bug
     private var assistModeState by androidx.compose.runtime.mutableStateOf(false)
 
     private fun Intent.isAssist() =
@@ -70,6 +69,9 @@ class MainActivity : ComponentActivity() {
         assistModeState = intent?.isAssist() == true
         if (assistModeState) setTheme(com.lantianhcgp.erbian.R.style.Theme_Erbian_Assist)
         super.onCreate(savedInstanceState)
+        // 2026-10-16 edge-to-edge：系统栏区原本显示 windowBackground、Compose 不画到其后 →
+        // 两截色。启用后 Compose 画满全屏（含系统栏），透明系统栏即与页面同色（assist 浮层除外）。
+        if (!assistModeState) androidx.activity.enableEdgeToEdge(this)
         setContent {
             val vm: AppViewModel = viewModel()
             ErbianTheme(

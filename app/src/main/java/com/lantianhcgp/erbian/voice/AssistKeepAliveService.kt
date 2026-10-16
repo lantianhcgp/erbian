@@ -16,19 +16,9 @@ import android.os.IBinder
 class AssistKeepAliveService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val nm = getSystemService(NotificationManager::class.java)
-        runCatching {
-            nm.createNotificationChannel(
-                NotificationChannel("erbian_float", "耳边浮层", NotificationManager.IMPORTANCE_LOW)
-            )
-            val n = Notification.Builder(this, "erbian_float")
-                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-                .setContentTitle("耳边")
-                .setContentText("唤醒浮层运行中")
-                .setOngoing(true)
-                .build()
-            startForeground(41, n)
-        }
+        // 2026-10-16 用户：不要抢前台的自动启动，改后台服务减少侵入性。
+        // 原实现 startForeground + 常驻通知「耳边浮层运行中」；现改为纯后台吊命：
+        // 不建通知渠道、不占前台、不发通知（浮层关闭仍 stopSelf）。
         return START_NOT_STICKY
     }
 
