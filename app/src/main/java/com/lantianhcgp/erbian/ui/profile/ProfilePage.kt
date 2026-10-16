@@ -104,7 +104,9 @@ private fun parseCards(raw: String?): List<ProfileCard> {
     if (raw.isNullOrBlank()) return emptyList()
     return runCatching {
         val root = Json.parse(raw)
-        root.opt("cards")?.asArray().orEmpty().mapNotNull { item ->
+        // 容忍两种真实形态：{"cards":[...]} 包裹（服务器写回契约）与裸数组（直接写 profile.json）
+        val arr = (root as? JsonValue.Arr ?: root.opt("cards"))?.asArray().orEmpty()
+        arr.mapNotNull { item ->
             runCatching {
                 ProfileCard(
                     category = item.optString("category", "其他"),

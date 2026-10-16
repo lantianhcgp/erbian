@@ -238,9 +238,9 @@ dump_diff t01.xml t05.xml 'T05 已从频道切走'
 png_diff T01-channel.png T05-schedule.png 'T05 帧≠T01帧'
 
 echo "== tour: T06 profile with seeded card + evidence expand =="
-# 种样本卡（3条证据测折叠）
+# 种样本卡（3条证据测折叠）。契约=服务器写回的 {"cards":[...]} 包裹格式（App 现也容忍裸数组）
 cat > /tmp/seed_profile.json <<'CARD'
-[{"category":"习惯","title":"英语听写需自带耳机","content":"听写前确认耳机，忘带会影响整节课节奏。","confidence":0.86,"evidence":["周三听写前确认耳机","周一提过忘带耳机","课代表职责提醒"]}]
+{"cards":[{"category":"习惯","title":"英语听写需自带耳机","content":"听写前确认耳机，忘带会影响整节课节奏。","confidence":0.86,"evidence":["周三听写前确认耳机","周一提过忘带耳机","课代表职责提醒"]}]}
 CARD
 adb push /tmp/seed_profile.json /data/local/tmp/seed_profile.json >/dev/null 2>&1 || true
 R "run-as $PKG sh -c 'cp /data/local/tmp/seed_profile.json files/profile.json'"
