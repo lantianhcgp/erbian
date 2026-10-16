@@ -191,14 +191,25 @@ private fun DockItem(tab: DockTab, selected: Boolean, onClick: () -> Unit, desc:
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(width = 52.dp, height = 30.dp)
-                .graphicsLayer { alpha = pillAlpha; scaleX = 0.7f + 0.3f * pillAlpha }
-                .background(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(50),
-                ),
+            modifier = Modifier.size(width = 52.dp, height = 30.dp),
         ) {
+            // 背景 pill 单独一层：alpha/缩放只作用于背景。
+            // 旧版把 graphicsLayer{alpha=pillAlpha} 挂在含 Icon 的 Box 上，
+            // 未选中 pillAlpha=0 → 整层连图标一起透明，只有当前页图标可见
+            // （真机+CI 帧实测：其余三槽图标区 0 像素，2026-10-16）。
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        alpha = pillAlpha
+                        scaleX = 0.7f + 0.3f * pillAlpha
+                        scaleY = 0.7f + 0.3f * pillAlpha
+                    }
+                    .background(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(50),
+                    ),
+            )
             Icon(
                 imageVector = if (selected) tab.on else tab.off,
                 contentDescription = tab.label,

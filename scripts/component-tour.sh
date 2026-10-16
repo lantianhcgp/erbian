@@ -201,6 +201,8 @@ echo "== tour: T01 channel base =="
 launch
 dump_dev /sdcard/t01.xml
 shot "$EV/T01-channel.png" || true
+# dock 图标可见性门禁：四槽图标区都得有像素（未选中图标被 layer alpha 隐身的回归，2026-10-16）
+python3 scripts/dock_icons_probe.py "$EV/T01-channel.png" || TOUR_FAIL=1
 
 echo "== tour: T02 input typing (keyboard open) =="
 tap_sel /sdcard/t01.xml 'text=说点什么' || true
@@ -275,6 +277,8 @@ dump_dev /sdcard/t06.xml
 shot "$EV/T06-profile-card.png" || true
 dump_has t06.xml '英语听写需自带耳机' 'T06 样本卡已渲染'
 dump_lacks t06.xml '周三听写前确认耳机' 'T06 证据默认折叠(不露正文)'
+# 卡片形状门禁：左右边缘必须竖直（超椭圆装配错=上窄下宽梯形，2026-10-16 真机实测）
+python3 scripts/shape_probe.py "$EV/T06-profile-card.png" || TOUR_FAIL=1
 tap_sel /sdcard/t06.xml 'text=点按展开' || tap_sel /sdcard/t06.xml 'text=共3条证据，点按展开' || true
 sleep 1
 dump_dev /sdcard/t06b.xml

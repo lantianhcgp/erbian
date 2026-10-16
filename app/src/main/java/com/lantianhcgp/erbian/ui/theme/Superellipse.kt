@@ -41,9 +41,13 @@ class SuperellipseShape(private val corner: Float) : Shape {
             }
             return pts
         }
-        // 左上 → 右上 → 右下 → 左下
-        val tl = cornerPts(r, r, -1f, -1f).reversed()
-        val tr = cornerPts(w - r, r, 1f, -1f)
+        // 四角弧必须按顺时针首尾相接装配（缺口边=直线）：
+        //   左上弧正向 (0,r)→(r,0)，右上弧反向 (w-r,0)→(w,r)，
+        //   右下弧正向 (w,h-r)→(w-r,h)，左下弧反向 (r,h)→(0,h-r)。
+        // 旧装配（tl 反向 + tr 正向）把上边接成交叉对角线，非零环绕填出的
+        // 是"上窄下宽的梯形"——真机与 CI 帧像素实测左右边缘各漂 ±15px（2026-10-16）。
+        val tl = cornerPts(r, r, -1f, -1f)
+        val tr = cornerPts(w - r, r, 1f, -1f).reversed()
         val br = cornerPts(w - r, h - r, 1f, 1f)
         val bl = cornerPts(r, h - r, -1f, 1f).reversed()
         val all = tl + tr + br + bl
