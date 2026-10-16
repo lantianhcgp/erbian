@@ -29,7 +29,10 @@ class SuperellipseShape(private val corner: Float) : Shape {
         val rDp = corner * density.density
         val r = minOf(rDp, w / 2f, h / 2f)
         if (r <= 0.5f) return Outline.Rectangle(Rect(Offset.Zero, size))
-        val n = 4.5
+        // n=4.5 时角部曲线极度贴近直边（|cos t|^(2/4.5) 在端点处几乎水平），
+        // 即使 r=16dp 视觉上仍是"方角"——用户 2026-10-16：几乎没有圆角。
+        // 降到 3.0：保留 squircle 的柔和感，但角部明显成弧。
+        val n = 3.0
         val path = Path()
         // 用超椭圆整体轮廓：把矩形四角替换为超椭圆弧
         // 采样四个象限角部曲线
