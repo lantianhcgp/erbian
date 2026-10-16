@@ -10,9 +10,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -159,17 +156,7 @@ fun HomeScreen(vm: AppViewModel) {
     }
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalTextToolbar provides toolbar) {
     androidx.compose.material3.MaterialTheme {
-        Box(
-            Modifier
-                .fillMaxSize()
-                // 记录手指按下位置 → 菜单弹在长按处
-                .pointerInput(Unit) {
-                    androidx.compose.foundation.gestures.awaitEachGesture {
-                        val d = awaitFirstDown(requireUnconsumed = false)
-                        toolbar.lastTouch = d.position
-                    }
-                }
-        ) {
+        Box(Modifier.fillMaxSize()) {
             // 底层铺满全屏（含状态栏/手势条区）：透明页面与状态栏不再透出白色窗口底
             // （2026-10-16 真机实测：状态栏 y0-100 露白 250，主体 y110 起才深色）
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
