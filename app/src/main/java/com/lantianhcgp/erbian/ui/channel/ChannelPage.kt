@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Route
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -332,8 +333,8 @@ private fun TypingRow() {
     val pulse by t.animateFloat(
         initialValue = 0.25f,
         targetValue = 1f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(650),
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable<Float>(
+            animation = androidx.compose.animation.core.tween(durationMillis = 650),
             repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
         ),
         label = "pulse",
