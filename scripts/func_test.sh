@@ -62,6 +62,19 @@ for pat in ('text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(
 PYEOF
 }
 
+# 滚动到某文案可见（Compose 超屏内容不进 dump，必须先滚到）
+scroll_to_text() { # $1=text  $2=dump basename
+  local i xy
+  for i in 1 2 3 4 5; do
+    snap "$2"
+    xy=$(xy_of "$2" text "$1")
+    [ -n "$xy" ] && return 0
+    timeout 20 adb shell input swipe 540 1500 540 700 400 >/dev/null 2>&1 || true
+    sleep 2
+  done
+  return 1
+}
+
 nav() { # $1=tab desc  $2=页面独有标记（防假绿：切页后必须见到标记）
   snap /sdcard/fn_nav.xml
   local xy
@@ -123,13 +136,12 @@ fi
 
 echo "== [F3] 功能: 设置页『纯黑模式』开关（点击→状态持久化）=="
 nav 3 "设置"
-BEFORE=$(sp_get pure_black)
+BEFORE=$(sp_get pure_black); BEFORE=${BEFORE:-false}
 echo "  点击前 pure_black=$BEFORE"
-snap /sdcard/fn_sw0.xml
-SXY=$(switch_xy fn_sw0.xml "纯黑模式（OLED）")
-if [ -z "$SXY" ]; then
-  bad "找不到纯黑模式开关所在行"
+if ! scroll_to_text "纯黑模式（OLED）" fn_sw0.xml; then
+  bad "滚动后仍找不到纯黑模式开关"
 else
+  SXY=$(switch_xy fn_sw0.xml "纯黑模式（OLED）")
   tap $SXY; sleep 3
   AFTER=$(sp_get pure_black)
   echo "  点击后 pure_black=$AFTER"
@@ -138,8 +150,8 @@ else
   else
     bad "纯黑模式开关无反应 ($BEFORE → $AFTER)"
   fi
-  # 点回复位
-  snap /sdcard/fn_sw1.xml
+  # 点回复位（重新滚到可见）
+  scroll_to_text "纯黑模式（OLED）" fn_sw1.xml || true
   SXY2=$(switch_xy fn_sw1.xml "纯黑模式（OLED）")
   [ -n "$SXY2" ] && tap $SXY2; sleep 3
   BACK=$(sp_get pure_black)
@@ -148,8 +160,11 @@ fi
 
 echo "== [F4] 功能: 日志页（设置 → 查看）=="
 nav 3 "设置"
-snap /sdcard/fn_log0.xml
-LXY=$(xy_of fn_log0.xml text "查看")
+if ! scroll_to_text "查看" fn_log0.xml; then
+  LXY=""
+else
+  LXY=$(xy_of fn_log0.xml text "查看")
+fi
 if [ -z "$LXY" ]; then
   bad "设置页找不到日志『查看』入口"
 else

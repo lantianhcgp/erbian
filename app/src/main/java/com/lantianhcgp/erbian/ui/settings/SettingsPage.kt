@@ -122,6 +122,15 @@ fun SettingsPage(vm: AppViewModel) {
             Text("Shizuku 用于唤醒设置自检自愈；未授权不影响核心收发", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
         }
 
+        // 日志（用户可见，完整运行日志）
+        ErbianCard {
+            CardTitle("日志")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("运行日志 · 网络/队列/自检全记录", fontSize = 13.sp)
+                PillButton("查看", onClick = { showLog = true }, filled = false)
+            }
+        }
+
         // MCP
         ErbianCard {
             CardTitle("MCP")
@@ -167,15 +176,6 @@ fun SettingsPage(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("纯黑模式（OLED）", fontSize = 13.sp)
                 Switch(checked = vm.config.pureBlack, onCheckedChange = { vm.config.pureBlack = it })
-            }
-        }
-
-        // 日志（用户可见，完整运行日志）
-        ErbianCard {
-            CardTitle("日志")
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("运行日志 · 网络/队列/自检全记录", fontSize = 13.sp)
-                PillButton("查看", onClick = { showLog = true }, filled = false)
             }
         }
 
