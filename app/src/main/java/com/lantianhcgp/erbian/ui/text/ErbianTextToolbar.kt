@@ -98,7 +98,7 @@ fun ErbianSelectionMenu(toolbar: ErbianTextToolbar) {
         onDismissRequest = { toolbar.dismiss() },
     ) {
         Surface(
-            shape = MaterialTheme.shapes.Medium,
+            shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shadowElevation = 6.dp,
         ) {
