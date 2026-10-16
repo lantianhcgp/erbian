@@ -95,6 +95,10 @@ sp_get() { # $1=bool key → 打印 true/false
     | grep -o "name=\"$1\" value=\"[^\"]*\"" | head -1 | sed 's/.*value="//;s/"//'
 }
 
+echo "== [F-ENV] 设备参数（核对 dp→px 换算） =="
+timeout 15 adb shell wm size 2>/dev/null | tr -d '\r' | sed 's/^/  size:     /'
+timeout 15 adb shell wm density 2>/dev/null | tr -d '\r' | sed 's/^/  density:  /'
+
 echo "== [F0] 归位: 从唤醒面板/任意态回到主界面 =="
 timeout 20 adb shell am force-stop $PKG >/dev/null 2>&1 || true
 sleep 1
