@@ -244,7 +244,8 @@ fi
 sleep 2
 dump_dev /sdcard/t04.xml
 shot "$EV/T04-longpress-menu.png" || true
-dump_has t04.xml '复制' 'T04 长按菜单(复制/重发)'
+dump_has t04.xml '复制' 'T04 选择菜单(复制)'
+dump_has t04.xml '记录到 Agent' 'T04 选择菜单含记录到Agent(2026-10-17 新自定义TextToolbar)'
 dump_diff t03.xml t04.xml 'T04 长按菜单浮层出现'
 png_diff T03-bubble.png T04-longpress-menu.png 'T04 帧≠T03帧'
 R "input keyevent 4"

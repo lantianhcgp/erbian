@@ -261,7 +261,6 @@ private fun SendCircle(enabled: Boolean, sending: Boolean, onClick: () -> Unit) 
 @androidx.compose.foundation.ExperimentalFoundationApi
 private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit, onAnalyze: () -> Unit = {}) {
     val isUser = m.origin in setOf("float", "channel")
-    var menuOpen by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val scheme = MaterialTheme.colorScheme
     Row(
@@ -275,12 +274,16 @@ private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit, onA
             color = if (isUser) scheme.primaryContainer else scheme.surfaceContainerHigh,
             border = if (isUser) null else BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.4f)),
             tonalElevation = 0.dp,
+            // 2026-10-17 用户：不要整条长按弹菜单 → 文字改真选中（rikkahub 式）；
+            // 「这条不对」改为点击 agent 气泡触发（用户气泡点击无效，重发走状态行）
             modifier = Modifier
                 .widthIn(max = 300.dp)
-                .combinedClickable(onClick = {}, onLongClick = { menuOpen = true }),
+                .clickable(enabled = !isUser, onClick = onNotRight),
         ) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                Text(m.body, style = MaterialTheme.typography.bodyLarge)
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(m.body, style = MaterialTheme.typography.bodyLarge)
+                }
                 if (isUser) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
@@ -298,29 +301,6 @@ private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit, onA
                     }
                 }
             }
-        }
-        // 长按菜单（设计 §六：复制 / 重发 / 这条不对）
-        androidx.compose.material3.DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            androidx.compose.material3.DropdownMenuItem(
-                text = { Text("复制") },
-                onClick = {
-                    menuOpen = false
-                    runCatching {
-                        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("erbian-msg", m.body))
-                    }
-                },
-            )
-            if (isUser) {
-                androidx.compose.material3.DropdownMenuItem(text = { Text("重发") }, onClick = { menuOpen = false; onResend() })
-            } else {
-                androidx.compose.material3.DropdownMenuItem(text = { Text("这条不对") }, onClick = { menuOpen = false; onNotRight() })
-            }
-            // F2（2026-10-16）：一键把这条文字记录交给 agent（等同系统菜单里的"记录"意图）
-            androidx.compose.material3.DropdownMenuItem(
-                text = { Text("记录到 Agent") },
-                onClick = { menuOpen = false; onAnalyze() },
-            )
         }
         }
     }

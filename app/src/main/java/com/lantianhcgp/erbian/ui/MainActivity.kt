@@ -10,6 +10,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -146,8 +149,27 @@ private val tabs = listOf(
 fun HomeScreen(vm: AppViewModel) {
     var page by remember { mutableIntStateOf(0) }
 
+    // 2026-10-17：接管文字选择菜单（rikkahub 式长按选中 + 菜单加「记录到 Agent」）
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val toolbar = remember {
+        com.lantianhcgp.erbian.ui.text.ErbianTextToolbar(
+            readClipboard = { clipboard.getText()?.text },
+            onRecord = { text -> vm.send("记录到 Agent（用户选中的文字）：$text") },
+        )
+    }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalTextToolbar provides toolbar) {
     androidx.compose.material3.MaterialTheme {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                // 记录手指按下位置 → 菜单弹在长按处
+                .pointerInput(Unit) {
+                    androidx.compose.foundation.gestures.awaitEachGesture {
+                        val d = awaitFirstDown(requireUnconsumed = false)
+                        toolbar.lastTouch = d.position
+                    }
+                }
+        ) {
             // 底层铺满全屏（含状态栏/手势条区）：透明页面与状态栏不再透出白色窗口底
             // （2026-10-16 真机实测：状态栏 y0-100 露白 250，主体 y110 起才深色）
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
@@ -170,5 +192,8 @@ fun HomeScreen(vm: AppViewModel) {
                 ErbianDock(page = page, onSelected = { page = it })
             }
         }
+    }
+    // 选择菜单浮层（复制/全选/记录到 Agent）
+    com.lantianhcgp.erbian.ui.text.ErbianSelectionMenu(toolbar)
     }
 }
