@@ -6,6 +6,9 @@ import android.provider.CalendarContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -164,7 +167,7 @@ fun SchedulePage(vm: AppViewModel) {
                                         onClick = { confirmDel = true },
                                     ) {
                                         androidx.compose.material3.Icon(
-                                            androidx.compose.material.icons.Icons.Outlined.Delete,
+                                            Icons.Outlined.Delete,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.outline,
                                             modifier = Modifier.size(18.dp),

@@ -261,6 +261,8 @@ private fun LogScreen(vm: AppViewModel, onBack: () -> Unit) {
         )
         Spacer(Modifier.height(2.dp))
         // F1（2026-10-16 用户）：日志长按可选中复制（SelectionContainer）+ 一键发送给 agent 诊断
+        // clipboard 必须在 composable 上下文取（onClick 是普通 lambda，不能调 @Composable getter）
+        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
         Row(
             Modifier.fillMaxWidth().padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -268,16 +270,14 @@ private fun LogScreen(vm: AppViewModel, onBack: () -> Unit) {
         ) {
             PillButton("发送诊断给 Agent", onClick = { vm.sendLogDiagnostics() })
             PillButton("复制全部", onClick = {
-                androidx.compose.ui.platform.LocalClipboardManager.current.setText(
-                    androidx.compose.ui.text.AnnotatedString(lines.joinToString("\n"))
-                )
+                clipboard.setText(androidx.compose.ui.text.AnnotatedString(lines.joinToString("\n")))
             }, filled = false)
         }
         vm.diagNote?.let {
             Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary,
                  modifier = Modifier.padding(bottom = 4.dp))
         }
-        androidx.compose.foundation.selection.SelectionContainer {
+        androidx.compose.foundation.text.selection.SelectionContainer {
             LazyColumn(Modifier.weight(1f)) {
                 items(lines) { l ->
                     Text(

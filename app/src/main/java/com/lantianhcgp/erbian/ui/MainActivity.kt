@@ -71,7 +71,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // 2026-10-16 edge-to-edge：系统栏区原本显示 windowBackground、Compose 不画到其后 →
         // 两截色。启用后 Compose 画满全屏（含系统栏），透明系统栏即与页面同色（assist 浮层除外）。
-        if (!assistModeState) androidx.activity.enableEdgeToEdge(this)
+        // enableEdgeToEdge 在当前依赖下不可解析 → 用 WindowCompat（同效果：内容画到系统栏后）
+        if (!assistModeState) {
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
         setContent {
             val vm: AppViewModel = viewModel()
             ErbianTheme(

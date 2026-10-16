@@ -328,11 +328,11 @@ private fun Bubble(m: Message, onResend: () -> Unit, onNotRight: () -> Unit, onA
 /** F3：agent 处理中的进行时指示（三点脉冲 + 文字）。 */
 @androidx.compose.runtime.Composable
 private fun TypingRow() {
-    val t = androidx.compose.animation.rememberInfiniteTransition(label = "typing")
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "typing")
     val pulse by t.animateFloat(
         initialValue = 0.25f,
         targetValue = 1f,
-        animationSpec = androidx.compose.animation.infiniteRepeatable(
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
             animation = androidx.compose.animation.core.tween(650),
             repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
         ),
