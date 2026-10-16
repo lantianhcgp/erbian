@@ -90,9 +90,6 @@ fun ProfilePage(vm: AppViewModel) {
                                 )
                             }
                         }
-                        Row(Modifier.padding(top = 6.dp)) {
-                            PillButton("这条不对", onClick = { vm.send("画像这条不对：${c.title}") }, filled = false)
-                        }
                     }
                 }
             }

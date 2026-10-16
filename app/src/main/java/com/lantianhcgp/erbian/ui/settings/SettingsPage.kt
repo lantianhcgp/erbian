@@ -8,10 +8,14 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +31,8 @@ import androidx.core.content.ContextCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lantianhcgp.erbian.ui.AppViewModel
@@ -39,6 +45,9 @@ import com.lantianhcgp.erbian.ui.widgets.StatusDot
 @Composable
 fun SettingsPage(vm: AppViewModel) {
     val context = LocalContext.current
+    var showLog by remember { mutableStateOf(false) }
+
+    if (showLog) { LogScreen(vm) { showLog = false }; return }
 
     Column(
         Modifier
@@ -161,6 +170,15 @@ fun SettingsPage(vm: AppViewModel) {
             }
         }
 
+        // 日志（用户可见，完整运行日志）
+        ErbianCard {
+            CardTitle("日志")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("运行日志 · 网络/队列/自检全记录", fontSize = 13.sp)
+                PillButton("查看", onClick = { showLog = true }, filled = false)
+            }
+        }
+
         // 关于
         ErbianCard {
             CardTitle("关于")
@@ -173,4 +191,66 @@ fun SettingsPage(vm: AppViewModel) {
 private fun copyToClipboard(context: Context, text: String) {
     val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     cm.setPrimaryClip(ClipData.newPlainText("erbian-token", text))
+}
+
+/**
+ * 用户可见的运行日志页（设置 → 日志 → 查看）。
+ * 展示 Logger 完整环形缓冲（最近 500 条，网络/队列/自检/上行全记录）+ 落盘文件清单。
+ * 与 MCP log_tail 同一数据源，供无 MCP 时在端上直接排查。
+ */
+@Composable
+private fun LogScreen(vm: AppViewModel, onBack: () -> Unit) {
+    var tick by remember { mutableStateOf(0) }
+    val lines = remember(tick) { vm.logger.tail(500) }
+    val files = remember(tick) {
+        vm.logger.logDir().listFiles()
+            ?.sortedByDescending { it.name }
+            ?.joinToString("\n") { "${it.name}  ${it.length() / 1024}KB" }
+            ?: "（暂无日志文件）"
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 14.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("运行日志", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton("刷新", onClick = { tick++ }, filled = false)
+                PillButton("返回", onClick = onBack, filled = false)
+            }
+        }
+        Text(
+            "最近 ${lines.size} 条（缓冲上限 500）",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.outline,
+        )
+        Text(
+            files,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 4.dp),
+        )
+        Spacer(Modifier.height(2.dp))
+        LazyColumn(Modifier.weight(1f)) {
+            items(lines) { l ->
+                Text(
+                    l,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(vertical = 1.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(com.lantianhcgp.erbian.ui.dockBottomInset()))
+    }
 }

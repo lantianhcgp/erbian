@@ -23,7 +23,10 @@ class SuperellipseShape(private val corner: Float) : Shape {
         val w = size.width
         val h = size.height
         if (w <= 0f || h <= 0f) return Outline.Rectangle(Rect(Offset.Zero, size))
-        val r = minOf(corner, w / 2f, h / 2f)
+        // corner 是 dp 语义值（Corners.MD=16f=16dp），必须按 density 转像素；
+        // 旧版当原始像素用 → 16px≈5dp，真机上"几乎没有圆角"（2026-10-16 用户反馈）
+        val rDp = with(density) { corner.toDp().toPx() }
+        val r = minOf(rDp, w / 2f, h / 2f)
         if (r <= 0.5f) return Outline.Rectangle(Rect(Offset.Zero, size))
         val n = 4.5
         val path = Path()

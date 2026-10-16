@@ -74,6 +74,7 @@ class AppViewModel : ViewModel() {
     }
 
     val config get() = Locator.config
+    val logger get() = Locator.logger
     val queueInFlight get() = Locator.queue.inFlightCount()
     val shizukuPermission get() = Locator.shizuku.hasPermission()
     val assistantComponent get() = Locator.assistantComponent()

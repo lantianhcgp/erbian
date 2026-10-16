@@ -263,7 +263,7 @@ png_diff T01-channel.png T05-schedule.png 'T05 帧≠T01帧'
 echo "== tour: T06 profile with seeded card + evidence expand =="
 # 种样本卡（3条证据测折叠）。契约=服务器写回的 {"cards":[...]} 包裹格式（App 现也容忍裸数组）
 cat > /tmp/seed_profile.json <<'CARD'
-{"cards":[{"category":"习惯","title":"英语听写需自带耳机","content":"听写前确认耳机，忘带会影响整节课节奏。","confidence":0.86,"evidence":["周三听写前确认耳机","周一提过忘带耳机","课代表职责提醒"]}]}
+{"cards":[{"category":"身份","title":"高三学生 · 英语课代表","content":"每周6天课，节奏紧凑；承担英语听写组织与课代表职责，学习规划以词汇积累为主线。","confidence":0.92,"evidence":["每周六天课，日程排满","负责组织英语听写与词汇学习","自述任高三英语课代表"]}]}
 CARD
 adb push /tmp/seed_profile.json /data/local/tmp/seed_profile.json >/dev/null 2>&1 || true
 R "run-as $PKG sh -c 'cp /data/local/tmp/seed_profile.json files/profile.json'"
@@ -275,15 +275,15 @@ tap_sel /sdcard/t06pre.xml 'desc=2' || true
 sleep 2
 dump_dev /sdcard/t06.xml
 shot "$EV/T06-profile-card.png" || true
-dump_has t06.xml '英语听写需自带耳机' 'T06 样本卡已渲染'
-dump_lacks t06.xml '周三听写前确认耳机' 'T06 证据默认折叠(不露正文)'
+dump_has t06.xml '高三学生' 'T06 样本卡已渲染'
+dump_lacks t06.xml '每周六天课' 'T06 证据默认折叠(不露正文)'
 # 卡片形状门禁：左右边缘必须竖直（超椭圆装配错=上窄下宽梯形，2026-10-16 真机实测）
 python3 scripts/shape_probe.py "$EV/T06-profile-card.png" || TOUR_FAIL=1
 tap_sel /sdcard/t06.xml 'text=点按展开' || tap_sel /sdcard/t06.xml 'text=共3条证据，点按展开' || true
 sleep 1
 dump_dev /sdcard/t06b.xml
 shot "$EV/T06b-profile-expanded.png" || true
-dump_has t06b.xml '周三听写前确认耳机' 'T06b 证据已展开'
+dump_has t06b.xml '每周六天课' 'T06b 证据已展开'
 dump_diff t06.xml t06b.xml 'T06b 与 T06 层级不同'
 png_diff T06-profile-card.png T06b-profile-expanded.png 'T06b 帧≠T06帧'
 

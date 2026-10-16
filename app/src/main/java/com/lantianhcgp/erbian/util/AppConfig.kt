@@ -36,16 +36,22 @@ class AppConfig(context: Context) {
         set(v) = sp.edit().putString("server_token", v).apply()
 
     var mcpEnabled: Boolean
-        get() = sp.getBoolean("mcp_enabled", true)
-        set(v) = sp.edit().putBoolean("mcp_enabled", v).apply()
+        get() = _mcpEnabled.value
+        set(v) { _mcpEnabled.value = v; sp.edit().putBoolean("mcp_enabled", v).apply() }
 
     var dynamicColor: Boolean
-        get() = sp.getBoolean("dynamic_color", true)
-        set(v) = sp.edit().putBoolean("dynamic_color", v).apply()
+        get() = _dynamicColor.value
+        set(v) { _dynamicColor.value = v; sp.edit().putBoolean("dynamic_color", v).apply() }
 
     var pureBlack: Boolean
-        get() = sp.getBoolean("pure_black", false)
-        set(v) = sp.edit().putBoolean("pure_black", v).apply()
+        get() = _pureBlack.value
+        set(v) { _pureBlack.value = v; sp.edit().putBoolean("pure_black", v).apply() }
+
+    // Compose 可观察：纯 SharedPreferences 字段写入不触发重组 → Switch 看着"按不动"、
+    // 主题也不刷新（2026-10-16 用户反馈：设置页两个开关点了没反应）
+    private val _mcpEnabled = androidx.compose.runtime.mutableStateOf(sp.getBoolean("mcp_enabled", true))
+    private val _dynamicColor = androidx.compose.runtime.mutableStateOf(sp.getBoolean("dynamic_color", true))
+    private val _pureBlack = androidx.compose.runtime.mutableStateOf(sp.getBoolean("pure_black", false))
 
     companion object {
         const val DEFAULT_UPLINK_URL = "http://127.0.0.1:8644/webhooks/erbian-record"

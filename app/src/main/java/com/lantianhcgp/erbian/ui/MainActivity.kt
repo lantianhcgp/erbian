@@ -143,6 +143,9 @@ fun HomeScreen(vm: AppViewModel) {
 
     androidx.compose.material3.MaterialTheme {
         Box(Modifier.fillMaxSize()) {
+            // 底层铺满全屏（含状态栏/手势条区）：透明页面与状态栏不再透出白色窗口底
+            // （2026-10-16 真机实测：状态栏 y0-100 露白 250，主体 y110 起才深色）
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
             AnimatedContent(
                 targetState = page,
                 transitionSpec = {
