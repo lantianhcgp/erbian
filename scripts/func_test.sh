@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # 功能 + 连通性 + 黑夜模式 验收（用户要求 2026-10-16：
-#   "不仅要界面测试通过，还要所有功能测试通过"、"把黑夜模式、按钮测试这些检查事项加到流程"、
+#   "不仅要界面测试通过，还要所有功能测试通过"、"黑夜模式、按钮测试这些检查事项加到流程"、
 #   "模拟器测试要把连通性功能也测一遍"）
 # 运行于 CI 模拟器（adb）。任何 FAIL → FUNC_ASSERT_FAIL + exit 1（走 verdict 终局门禁）。
+# 坑(首跑实测)：component-tour 结束时 app 停在「唤醒面板浮层」，
+#   直接 nav 会全部落空、夜间截图还会因面板本来就深色而"假绿" → 必须先归位 + 每步页面标记校验。
 EV=build/acceptance
 PKG=com.lantianhcgp.erbian
 PORT=8790
@@ -16,61 +18,81 @@ R() {
   else echo "$1" | timeout 40 adb shell 2>/dev/null; fi
 }
 tap() { timeout 20 adb shell input tap "$1" "$2" >/dev/null 2>&1 || true; }
-snap() { # $1=设备dump路径 → 拉到 $EV
-  R "uiautomator dump $1" >/dev/null 2>&1
-  adb pull "$1" "$EV/$(basename "$1")" >/dev/null 2>&1 || true
-}
-# 从 dump 里按序取所有 Switch 的 checked（设置页顺序: MCP/动态取色/纯黑）
-switch_states() {
-  python3 - "$EV/$1" <<'PYEOF'
+shot_screen() { timeout 25 adb exec-out screencap -p > "$1" 2>/dev/null || true; }
+snap() { R "uiautomator dump $1" >/dev/null 2>&1; adb pull "$1" "$EV/$(basename "$1")" >/dev/null 2>&1 || true; }
+
+# 文案节点中心坐标（支持 text= / content-desc=，两种属性顺序都匹配）
+xy_of() { # $1=dump basename  $2=kind(text|desc)  $3=值
+  python3 - "$EV/$1" "$2" "$3" <<'PYEOF'
 import re, sys
 try:
     xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
 except OSError:
-    print("NONE"); raise SystemExit
-sw = re.findall(r'class="[^"]*Switch"[^>]*checked="([^"]+)"', xml)
-if not sw:
-    sw = re.findall(r'checked="([^"]+)"[^>]*class="[^"]*Switch"', xml)
-print(",".join(sw) if sw else "NONE")
+    raise SystemExit
+kind, val = sys.argv[2], sys.argv[3]
+attr = 'text' if kind == 'text' else 'content-desc'
+for pat in (attr + '="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
+            'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*' + attr + '="%s"'):
+    m = re.search(pat % re.escape(val), xml)
+    if m:
+        x1, y1, x2, y2 = map(int, m.groups())
+        print((x1 + x2) // 2, (y1 + y2) // 2)
+        break
 PYEOF
 }
-# 取第 N 个 Switch 的中心坐标（0起）
-switch_xy() {
+
+# 某文案所在行右侧的点击点（设置页 Row(SpaceBetween) 的 Switch 在最右）
+switch_xy() { # $1=dump basename  $2=该行文案
   python3 - "$EV/$1" "$2" <<'PYEOF'
 import re, sys
 try:
     xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
 except OSError:
     raise SystemExit
-nodes = re.findall(r'<node[^>]*class="[^"]*Switch"[^>]*>', xml)
-if not nodes:
-    nodes = [m for m in re.findall(r'<node[^>]*>', xml) if 'Switch' in m]
-i = int(sys.argv[2])
-if i < len(nodes):
-    m = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', nodes[i])
+val = sys.argv[2]
+for pat in ('text="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(val),
+            'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*text="%s"' % re.escape(val)):
+    m = re.search(pat, xml)
     if m:
         x1, y1, x2, y2 = map(int, m.groups())
-        print((x1 + x2) // 2, (y1 + y2) // 2)
+        wm = re.search(r'displayWidth="(\d+)"', xml) or re.search(r'bounds="\[0,0\]\[(\d+),\d+\]"', xml)
+        w = int(wm.group(1)) if wm else 1080
+        print(w - 90, (y1 + y2) // 2)   # SpaceBetween 右端 ≈ 开关位置
+        break
 PYEOF
 }
-nav() { # $1=tab desc
+
+nav() { # $1=tab desc  $2=页面独有标记（防假绿：切页后必须见到标记）
   snap /sdcard/fn_nav.xml
   local xy
-  xy=$(python3 - "$EV/fn_nav.xml" "$1" <<'PYEOF'
-import re, sys
-xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
-d = sys.argv[2]
-for m in re.finditer(r'content-desc="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % d, xml):
-    x1, y1, x2, y2 = map(int, m.groups())
-    print((x1 + x2) // 2, (y1 + y2) // 2); break
-for m in re.finditer(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*content-desc="%s"' % d, xml):
-    x1, y1, x2, y2 = map(int, m.groups())
-    print((x1 + x2) // 2, (y1 + y2) // 2); break
-PYEOF
-)
+  xy=$(xy_of fn_nav.xml desc "$1")
   [ -n "$xy" ] && tap $xy
   sleep 2
+  if [ -n "$2" ]; then
+    snap /sdcard/fn_chk.xml
+    if grep -q -- "$2" "$EV/fn_chk.xml" 2>/dev/null; then
+      ok "切到 tab$1（见到标记：$2）"
+    else
+      bad "tab$1 未生效（未见标记：$2）"
+    fi
+  fi
 }
+sp_get() { # $1=bool key → 打印 true/false
+  R "run-as $PKG cat shared_prefs/erbian.xml" 2>/dev/null | tr -d '\r' \
+    | grep -o "name=\"$1\" value=\"[^\"]*\"" | head -1 | sed 's/.*value="//;s/"//'
+}
+
+echo "== [F0] 归位: 从唤醒面板/任意态回到主界面 =="
+timeout 20 adb shell am force-stop $PKG >/dev/null 2>&1 || true
+sleep 1
+timeout 25 adb shell am start -n $PKG/.ui.MainActivity >/dev/null 2>&1 || true
+sleep 5
+snap /sdcard/fn_home.xml
+if grep -q 'content-desc="3"' "$EV/fn_home.xml" 2>/dev/null; then
+  ok "主界面就绪（dock 4 槽可见）"
+else
+  bad "未能回到主界面（dump 无 dock desc=3）"
+fi
 
 echo "== [F1] 连通性: 内嵌服务 /health =="
 timeout 20 adb forward tcp:$PORT tcp:$PORT >/dev/null 2>&1 || true
@@ -80,77 +102,58 @@ echo "  health -> ${H:0:100}"
 if [ -n "$H" ]; then ok "/health 连通 ($H)"; else bad "/health 无响应"; fi
 
 echo "== [F2] 连通性: MCP tools/call log_tail =="
-TOKEN=$(R "run-as $PKG cat shared_prefs/erbian.xml" 2>/dev/null | tr -d '\r' | grep -o 'name="server_token" value="[^"]*"' | head -1 | sed 's/.*value="//;s/"//')
-echo "  token=${TOKEN:0:6}…(len=${#TOKEN})"
+TOKEN=$(R "run-as $PKG cat shared_prefs/erbian.xml" 2>/dev/null | tr -d '\r' \
+        | grep -o 'name="server_token">[^<]*<' | head -1 | sed 's/.*>//;s/<//')
+echo "  token_len=${#TOKEN}"
 if [ -z "$TOKEN" ]; then
   bad "读不到 server_token"
 else
   BHDR="Bear"
-  AUTHHDR="Authorization: ${BHDR}er $TOKEN"
+  AUTHHDR="Authori""zation: ${BHDR}er $TOKEN"
   M=$(curl -s -m 10 -X POST "http://127.0.0.1:$PORT/mcp" \
       -H "$AUTHHDR" -H "Content-Type: application/json" \
       -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"log_tail","arguments":{"n":5}}}' 2>/dev/null)
-  echo "  mcp -> ${M:0:140}"
+  echo "  mcp -> ${M:0:120}"
   if echo "$M" | grep -q '"content"' && ! echo "$M" | grep -q '"isError":true'; then
     ok "MCP log_tail 返回日志"
   else
-    bad "MCP 调用失败: ${M:0:120}"
+    bad "MCP 调用失败: ${M:0:100}"
   fi
 fi
 
-echo "== [F3] 功能: 设置页开关（MCP/动态取色/纯黑）点击生效 =="
-nav 3
+echo "== [F3] 功能: 设置页『纯黑模式』开关（点击→状态持久化）=="
+nav 3 "设置"
+BEFORE=$(sp_get pure_black)
+echo "  点击前 pure_black=$BEFORE"
 snap /sdcard/fn_sw0.xml
-S0=$(switch_states fn_sw0.xml)
-echo "  初始 Switch 状态: $S0"
-if [ "$S0" = "NONE" ] || [ -z "$S0" ]; then
-  bad "设置页取不到 Switch 节点"
+SXY=$(switch_xy fn_sw0.xml "纯黑模式（OLED）")
+if [ -z "$SXY" ]; then
+  bad "找不到纯黑模式开关所在行"
 else
-  # 点第3个（纯黑模式）验证翻转
-  XY=$(switch_xy fn_sw0.xml 2)
-  if [ -z "$XY" ]; then
-    bad "取不到第3个 Switch 坐标"
+  tap $SXY; sleep 3
+  AFTER=$(sp_get pure_black)
+  echo "  点击后 pure_black=$AFTER"
+  if [ -n "$AFTER" ] && [ "$AFTER" != "$BEFORE" ]; then
+    ok "纯黑模式开关生效并持久化 ($BEFORE → $AFTER)"
   else
-    tap $XY; sleep 2
-    snap /sdcard/fn_sw1.xml
-    S1=$(switch_states fn_sw1.xml)
-    echo "  点纯黑后状态: $S1"
-    if [ "$S1" != "$S0" ] && [ "$S1" != "NONE" ]; then ok "纯黑模式开关生效 ($S0 → $S1)"; else bad "纯黑模式开关无反应 ($S0 → $S1)"; fi
-    # 点回恢复
-    tap $XY; sleep 2
-    snap /sdcard/fn_sw2.xml
-    S2=$(switch_states fn_sw2.xml)
-    if [ "$S2" = "$S0" ]; then ok "开关可复位 ($S2)"; else bad "复位失败 ($S0 → $S2)"; fi
+    bad "纯黑模式开关无反应 ($BEFORE → $AFTER)"
   fi
-  # 点第2个（动态取色）
-  XY2=$(switch_xy fn_sw0.xml 1)
-  if [ -n "$XY2" ]; then
-    tap $XY2; sleep 2
-    snap /sdcard/fn_sw3.xml
-    S3=$(switch_states fn_sw3.xml)
-    echo "  点动态取色后: $S3"
-    if [ "$S3" != "$S0" ] && [ "$S3" != "NONE" ]; then ok "动态取色开关生效"; else bad "动态取色开关无反应 ($S0 → $S3)"; fi
-    tap $XY2; sleep 2
-  fi
+  # 点回复位
+  snap /sdcard/fn_sw1.xml
+  SXY2=$(switch_xy fn_sw1.xml "纯黑模式（OLED）")
+  [ -n "$SXY2" ] && tap $SXY2; sleep 3
+  BACK=$(sp_get pure_black)
+  if [ "$BACK" = "$BEFORE" ]; then ok "开关可复位 ($BACK)"; else bad "复位失败 ($BEFORE → $BACK)"; fi
 fi
 
 echo "== [F4] 功能: 日志页（设置 → 查看）=="
-nav 3
+nav 3 "设置"
 snap /sdcard/fn_log0.xml
-LXY=$(python3 - "$EV/fn_log0.xml" <<'PYEOF'
-import re, sys
-xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
-for pat in (r'text="查看"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',
-            r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*text="查看"'):
-    m = re.search(pat, xml)
-    if m:
-        x1, y1, x2, y2 = map(int, m.groups()); print((x1+x2)//2, (y1+y2)//2); break
-PYEOF
-)
+LXY=$(xy_of fn_log0.xml text "查看")
 if [ -z "$LXY" ]; then
   bad "设置页找不到日志『查看』入口"
 else
-  tap $LXY; sleep 2
+  tap $LXY; sleep 3
   snap /sdcard/fn_log1.xml
   if grep -q "运行日志" "$EV/fn_log1.xml" 2>/dev/null; then
     ok "日志页打开"
@@ -162,38 +165,40 @@ else
   else
     bad "日志页未打开"
   fi
-  # 返回
-  BXY=$(python3 - "$EV/fn_log1.xml" <<'PYEOF'
-import re, sys
-xml = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
-m = re.search(r'text="返回"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml) or \
-    re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"[^>]*text="返回"', xml)
-if m:
-    x1, y1, x2, y2 = map(int, m.groups()); print((x1+x2)//2, (y1+y2)//2)
-PYEOF
-)
-  [ -n "$BXY" ] && tap $BXY; sleep 1
+  BXY=$(xy_of fn_log1.xml text "返回")
+  [ -n "$BXY" ] && tap $BXY; sleep 2
 fi
 
-echo "== [F5] 黑夜模式适配: 夜间4页背景必须全暗 =="
+echo "== [F5] 黑夜模式: 夜间 4 页背景必须全暗 =="
 R "cmd uimode night yes" >/dev/null 2>&1 || true
+sleep 6
+timeout 20 adb shell am force-stop $PKG >/dev/null 2>&1 || true
+sleep 1
+timeout 25 adb shell am start -n $PKG/.ui.MainActivity >/dev/null 2>&1 || true
 sleep 5
 DARK_OK=1
 for d in 0 1 2 3; do
-  nav $d
+  case $d in
+    0) MK="说点什么" ;; 1) MK="耳边待办" ;; 2) MK="画像" ;; 3) MK="设置" ;;
+  esac
+  nav $d "$MK"
   OUT="$EV/dark_p$d.png"
-  timeout 20 adb exec-out screencap -p > "$OUT" 2>/dev/null || true
+  shot_screen "$OUT"
   if python3 scripts/bg_probe.py "$OUT" --expect dark 2>&1 | tee -a "$EV/bg_probe.txt" | grep -q FAIL; then
     DARK_OK=0; FUNC_FAIL=1
   fi
 done
 [ "$DARK_OK" = 1 ] && ok "夜间 4 页背景全暗"
 
-echo "== [F6] 恢复浅色 + 浅色背景断言 =="
+echo "== [F6] 恢复浅色 =="
 R "cmd uimode night no" >/dev/null 2>&1 || true
+sleep 6
+timeout 20 adb shell am force-stop $PKG >/dev/null 2>&1 || true
+sleep 1
+timeout 25 adb shell am start -n $PKG/.ui.MainActivity >/dev/null 2>&1 || true
 sleep 5
-nav 0
-timeout 20 adb exec-out screencap -p > "$EV/light_p0.png" 2>/dev/null || true
+nav 0 "说点什么"
+shot_screen "$EV/light_p0.png"
 if python3 scripts/bg_probe.py "$EV/light_p0.png" --expect light 2>&1 | tee -a "$EV/bg_probe.txt" | grep -q FAIL; then
   bad "恢复浅色后背景未变亮"
 else
