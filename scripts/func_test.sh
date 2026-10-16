@@ -65,11 +65,11 @@ PYEOF
 # 滚动到某文案可见（Compose 超屏内容不进 dump，必须先滚到）
 scroll_to_text() { # $1=text  $2=dump basename
   local i xy
-  for i in 1 2 3 4 5; do
-    snap "$2"
+  for i in 1 2 3 4 5 6; do
+    snap "/sdcard/$2"            # 必须绝对路径：相对路径会 dump 到仓库根、pull 落空
     xy=$(xy_of "$2" text "$1")
     [ -n "$xy" ] && return 0
-    timeout 20 adb shell input swipe 540 1500 540 700 400 >/dev/null 2>&1 || true
+    timeout 20 adb shell input swipe 540 1380 540 560 400 >/dev/null 2>&1 || true   # 起点避开浮动 dock(y1638+)
     sleep 2
   done
   return 1
