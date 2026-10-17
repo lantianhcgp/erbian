@@ -247,18 +247,19 @@ sleep 3   # 等选择手柄/菜单动画稳定
 # 菜单内容（复制/全选/记录到 Agent）由本地目检 T04 截图把关。
 shot "$EV/T04-longpress-menu.png" || true
 png_diff T03-bubble.png T04-longpress-menu.png 'T04 长按后帧变化(选择态/菜单)'
-# 退出选择态：**只 BACK 1 次关菜单**。实测教训（2026-10-17）：
-#  BACK×2 就已把 App 退到桌面（菜单+选中只吃 1 次 BACK），随后的 tap 点中桌面图标打开 Google Calendar；
-#  BACK×3 更是 finish Activity。所以绝不多按 BACK，选中态改由「点 dock 两次」消化（第一次被选中态吞掉）。
+# 长按选中态清理：实测（2026-10-17）选中态会①抑制 Compose semantics（dock desc 从 dump 消失）
+# ②吞掉后续 tap ③BACK 按多了直接退 App（BACK×2 已退桌面、误开过 Google Calendar）。
+# 结论：清理不可靠 → T04 之后直接重启 App 拿干净状态（几秒代价，换取 T05-T09 稳定）。
 R "input keyevent 4"; sleep 1
+R "am force-stop com.lantianhcgp.erbian" || true
+sleep 1
+R "am start -n com.lantianhcgp.erbian/.ui.MainActivity" || true
+sleep 5
 
 echo "== tour: T05 schedule =="
 close_ime   # 菜单关掉后键盘可能残留，dock 点击前必须确保无 IME
-dump_dev /sdcard/t04c.xml || true   # 关菜单后重新取 dock 坐标
-tap_sel /sdcard/t04c.xml 'desc=1' || tap_sel /sdcard/t01.xml 'desc=1' || true
-sleep 1
-# 第一次点可能被残留选中态吞掉（Compose 选中时首击=取消选中）→ 再点一次确保切页
-tap_sel /sdcard/t04c.xml 'desc=1' || tap_sel /sdcard/t01.xml 'desc=1' || true
+# App 已重启（T04 后），dock 坐标沿用 t01（固定布局）
+tap_sel /sdcard/t01.xml 'desc=1' || true
 sleep 2
 dump_dev /sdcard/t05.xml
 shot "$EV/T05-schedule.png" || true
