@@ -247,12 +247,11 @@ sleep 3   # 等选择手柄/菜单动画稳定
 # 菜单内容（复制/全选/记录到 Agent）由本地目检 T04 截图把关。
 shot "$EV/T04-longpress-menu.png" || true
 png_diff T03-bubble.png T04-longpress-menu.png 'T04 长按后帧变化(选择态/菜单)'
-# 彻底退出选择态：BACK×3 + 点空白，避免残留吞掉 dock 点击（T05 假失败）
+# 退出选择态：**最多 2 次 BACK**（1=关菜单 2=清选中；第3次 BACK 会 finish Activity 退到桌面，
+# 2026-10-17 实测踩过：BACK×3 后 t04c/t05 全是 Launcher 桌面）。再点 Header 下方空白兜底清选中。
 R "input keyevent 4"; sleep 1
 R "input keyevent 4"; sleep 1
-R "input keyevent 4"; sleep 1
-R "input tap 540 900"; sleep 1
-R "input keyevent 4"; sleep 1
+R "input tap 540 170"; sleep 1
 
 echo "== tour: T05 schedule =="
 close_ime   # 菜单关掉后键盘可能残留，dock 点击前必须确保无 IME
