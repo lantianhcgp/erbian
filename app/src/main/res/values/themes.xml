@@ -8,6 +8,16 @@
         <item name="android:windowBackground">#FFFBFE</item>
     </style>
 
+    <!-- 全局记录入口（PROCESS_TEXT）：一闪即过的透明主题（隐式继承 Theme.Erbian） -->
+    <style name="Theme.Erbian.Translucent">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
     <!-- 唤醒浮层模式：窗口透明，桌面/原应用透出，只留底部面板+自绘遮罩（弹窗效果） -->
     <style name="Theme.Erbian.Assist" parent="Theme.Erbian">
         <item name="android:windowIsTranslucent">true</item>

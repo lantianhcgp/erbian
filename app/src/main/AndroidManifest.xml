@@ -36,7 +36,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- 助理兜底入口：系统走 ACTION_ASSIST activity 路径时也能到我们 -->
+            <!-- 系统级「记录到 Agent」：任何应用选中文字后的系统菜单都会出现本项（ACTION_PROCESS_TEXT）。
+             android:label 即菜单里显示的名字。2026-10-17 用户要求全局效果。 -->
+        <activity
+            android:name=".ui.ProcessTextActivity"
+            android:exported="true"
+            android:label="记录到 Agent"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Erbian.Translucent">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- 助理兜底入口：系统走 ACTION_ASSIST activity 路径时也能到我们 -->
             <intent-filter>
                 <action android:name="android.intent.action.ASSIST" />
                 <category android:name="android.intent.category.DEFAULT" />

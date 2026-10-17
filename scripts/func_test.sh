@@ -188,6 +188,20 @@ else
   [ -n "$BXY" ] && tap $BXY; sleep 2
 fi
 
+echo "== [F4b] 全局记录链路（ACTION_PROCESS_TEXT → App 上行）=="
+# 系统级：任何 App 选中文字的菜单项即走此 intent；这里直接模拟系统调用验证端到端
+R "am start -a android.intent.action.PROCESS_TEXT -t text/plain -e android.intent.extra.PROCESS_TEXT '全局记录连通性测试文本' -n com.lantianhcgp.erbian/.ui.ProcessTextActivity" >/dev/null 2>&1 || true
+sleep 5
+GT=$(curl -s -m 8 -X POST http://127.0.0.1:8790/mcp \
+  -H "$AUTHHDR" -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"log_tail","arguments":{"n":30}}}' 2>/dev/null)
+echo "  log_tail -> ${GT:0:160}"
+if echo "$GT" | grep -q "process_text recorded"; then
+  ok "全局记录：PROCESS_TEXT 进 App 并落日志"
+else
+  bad "全局记录链路断（log_tail 无 process_text recorded）"
+fi
+
 echo "== [F5] 黑夜模式: 夜间 4 页背景必须全暗 =="
 R "cmd uimode night yes" >/dev/null 2>&1 || true
 sleep 6

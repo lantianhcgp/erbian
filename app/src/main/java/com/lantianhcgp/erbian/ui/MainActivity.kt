@@ -146,15 +146,9 @@ private val tabs = listOf(
 fun HomeScreen(vm: AppViewModel) {
     var page by remember { mutableIntStateOf(0) }
 
-    // 2026-10-17：接管文字选择菜单（rikkahub 式长按选中 + 菜单加「记录到 Agent」）
-    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
-    val toolbar = remember {
-        com.lantianhcgp.erbian.ui.text.ErbianTextToolbar(
-            readClipboard = { clipboard.getText()?.text },
-            onRecord = { text -> vm.send("记录到 Agent（用户选中的文字）：$text") },
-        )
-    }
-    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalTextToolbar provides toolbar) {
+    // 2026-10-17 v2：**不再接管 LocalTextToolbar**（接管导致耳边内菜单一直闪，用户反馈）。
+    // 系统默认选择菜单（复制/全选）+ 由 ACTION_PROCESS_TEXT 注册的「记录到 Agent」全局项，
+    // 一处注册、所有应用生效，且系统菜单本身稳定不闪。
     androidx.compose.material3.MaterialTheme {
         Box(Modifier.fillMaxSize()) {
             // 底层铺满全屏（含状态栏/手势条区）：透明页面与状态栏不再透出白色窗口底
@@ -179,8 +173,5 @@ fun HomeScreen(vm: AppViewModel) {
                 ErbianDock(page = page, onSelected = { page = it })
             }
         }
-    }
-    // 选择菜单浮层（复制/全选/记录到 Agent）
-    com.lantianhcgp.erbian.ui.text.ErbianSelectionMenu(toolbar)
     }
 }
