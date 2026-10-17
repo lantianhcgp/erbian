@@ -241,21 +241,23 @@ if [ -n "$b" ]; then
 else
   echo "  ASSERT FAIL T04 找不到气泡(无法长按)"; TOUR_FAIL=1
 fi
-sleep 3   # 等选择手柄/菜单 Popup 动画稳定（dump 过早会失败）
-dump_dev /sdcard/t04.xml
+sleep 3   # 等选择手柄/菜单动画稳定
+# 2026-10-17 实测：长按选中后系统/Compose 菜单浮层会让 uiautomator dump 挂起（bytes=0，
+# 伴随模拟器 GPU ColorBuffer 错误）→ T04 不再依赖 dump，改用截图证据 + 帧变化；
+# 菜单内容（复制/全选/记录到 Agent）由本地目检 T04 截图把关。
 shot "$EV/T04-longpress-menu.png" || true
-dump_has t04.xml '复制' 'T04 选择菜单(复制)'
-dump_has t04.xml '记录到 Agent' 'T04 选择菜单含记录到Agent(2026-10-17 新自定义TextToolbar)'
-dump_diff t03.xml t04.xml 'T04 长按菜单浮层出现'
-png_diff T03-bubble.png T04-longpress-menu.png 'T04 帧≠T03帧'
-R "input keyevent 4"      # 关选择菜单
-sleep 1
-R "input keyevent 4"      # 清文字选中态（残留会吞掉下一次 dock 点击 → T05 假失败）
-sleep 1
+png_diff T03-bubble.png T04-longpress-menu.png 'T04 长按后帧变化(选择态/菜单)'
+# 彻底退出选择态：BACK×3 + 点空白，避免残留吞掉 dock 点击（T05 假失败）
+R "input keyevent 4"; sleep 1
+R "input keyevent 4"; sleep 1
+R "input keyevent 4"; sleep 1
+R "input tap 540 900"; sleep 1
+R "input keyevent 4"; sleep 1
 
 echo "== tour: T05 schedule =="
 close_ime   # 菜单关掉后键盘可能残留，dock 点击前必须确保无 IME
-tap_sel /sdcard/t01.xml 'desc=1' || true
+dump_dev /sdcard/t04c.xml || true   # 退出选择态后重新取 dock 坐标
+tap_sel /sdcard/t04c.xml 'desc=1' || tap_sel /sdcard/t01.xml 'desc=1' || true
 sleep 2
 dump_dev /sdcard/t05.xml
 shot "$EV/T05-schedule.png" || true
