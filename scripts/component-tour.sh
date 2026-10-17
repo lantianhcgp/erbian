@@ -247,15 +247,17 @@ sleep 3   # 等选择手柄/菜单动画稳定
 # 菜单内容（复制/全选/记录到 Agent）由本地目检 T04 截图把关。
 shot "$EV/T04-longpress-menu.png" || true
 png_diff T03-bubble.png T04-longpress-menu.png 'T04 长按后帧变化(选择态/菜单)'
-# 退出选择态：**最多 2 次 BACK**（1=关菜单 2=清选中；第3次 BACK 会 finish Activity 退到桌面，
-# 2026-10-17 实测踩过：BACK×3 后 t04c/t05 全是 Launcher 桌面）。再点 Header 下方空白兜底清选中。
+# 退出选择态：**只 BACK 1 次关菜单**。实测教训（2026-10-17）：
+#  BACK×2 就已把 App 退到桌面（菜单+选中只吃 1 次 BACK），随后的 tap 点中桌面图标打开 Google Calendar；
+#  BACK×3 更是 finish Activity。所以绝不多按 BACK，选中态改由「点 dock 两次」消化（第一次被选中态吞掉）。
 R "input keyevent 4"; sleep 1
-R "input keyevent 4"; sleep 1
-R "input tap 540 170"; sleep 1
 
 echo "== tour: T05 schedule =="
 close_ime   # 菜单关掉后键盘可能残留，dock 点击前必须确保无 IME
-dump_dev /sdcard/t04c.xml || true   # 退出选择态后重新取 dock 坐标
+dump_dev /sdcard/t04c.xml || true   # 关菜单后重新取 dock 坐标
+tap_sel /sdcard/t04c.xml 'desc=1' || tap_sel /sdcard/t01.xml 'desc=1' || true
+sleep 1
+# 第一次点可能被残留选中态吞掉（Compose 选中时首击=取消选中）→ 再点一次确保切页
 tap_sel /sdcard/t04c.xml 'desc=1' || tap_sel /sdcard/t01.xml 'desc=1' || true
 sleep 2
 dump_dev /sdcard/t05.xml
